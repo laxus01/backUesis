@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { DateRangeDto } from './dto/date-range.dto';
@@ -42,4 +42,10 @@ export class AdministrationController {
   async findByVehicle(@Body() dto: VehicleIdDto) {
     return this.service.findByVehicleId(dto);
   }
+
+  @Delete(':id')
+  async remove(@Param('id') id: number) {
+    return this.service.remove(id);
+  }
+
 }

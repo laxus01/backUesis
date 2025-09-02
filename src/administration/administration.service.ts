@@ -94,4 +94,8 @@ export class AdministrationService {
       order: { date: 'DESC', id: 'DESC' },
     });
   }
+
+  async remove(id: number): Promise<void> {
+    await this.adminRepo.delete(id);
+  }
 }
