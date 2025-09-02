@@ -7,7 +7,7 @@ export class Administration {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'date', default: () => 'CURRENT_DATE' })
+  @Column({ type: 'date' })
   date: string; // YYYY-MM-DD
 
   @Column({ type: 'int' })

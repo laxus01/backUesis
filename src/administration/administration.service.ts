@@ -21,6 +21,8 @@ export class AdministrationService {
     if (!vehicle) throw new NotFoundException('Vehicle not found');
 
     const entity = new Administration();
+    // fecha: usar la provista o la actual en formato YYYY-MM-DD
+    entity.date = dto.date ?? new Date().toISOString().slice(0, 10);
     // asegurar entero
     entity.value = Number.isInteger(dto.value) ? dto.value : Math.trunc(Number(dto.value));
     entity.detail = dto.detail.trim();
@@ -59,6 +61,7 @@ export class AdministrationService {
           continue;
         }
         const entity = new Administration();
+        entity.date = dto.date ?? new Date().toISOString().slice(0, 10);
         entity.value = Number.isInteger(dto.value) ? dto.value : Math.trunc(Number(dto.value));
         entity.detail = dto.detail.trim();
         entity.payer = dto.payer.trim();
