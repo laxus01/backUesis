@@ -22,6 +22,21 @@ export class OwnerService {
     }
   }
 
+  async createMany(dtos: CreateOwnerDto[]) {
+    const created: Owner[] = [];
+    const failed: Array<{ input: CreateOwnerDto; reason: string }> = [];
+    for (const data of dtos) {
+      try {
+        const saved = await this.repo.save(this.repo.create(data));
+        created.push(saved);
+      } catch (e: any) {
+        if (e?.code === 'ER_DUP_ENTRY') failed.push({ input: data, reason: 'Owner already exists' });
+        else failed.push({ input: data, reason: 'Error creating owner' });
+      }
+    }
+    return { created, failed };
+  }
+
   async update(id: number, data: UpdateOwnerDto) {
     const existing = await this.findOne(id);
     if (!existing) throw new HttpException('Owner not found', HttpStatus.NOT_FOUND);
