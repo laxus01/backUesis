@@ -8,6 +8,9 @@ import { existsSync, mkdirSync } from 'fs';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
+  // Increase request body limits for large bulk payloads
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ limit: '25mb', extended: true }));
   app.useGlobalPipes(new ValidationPipe()); 
   // Ensure uploads directory exists and serve it statically
   const uploadsDir = join(process.cwd(), 'uploads');
