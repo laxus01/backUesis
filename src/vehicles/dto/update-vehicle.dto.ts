@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsPositive, IsString, Length } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsPositive, IsString, Length } from 'class-validator';
 
 export class UpdateVehicleDto {
   @IsOptional()
@@ -45,4 +45,23 @@ export class UpdateVehicleDto {
   @IsInt()
   @IsPositive()
   companyId?: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  engineNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  chassisNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  line?: string;
+
+  @IsOptional()
+  @IsDateString()
+  entryDate?: string;
 }

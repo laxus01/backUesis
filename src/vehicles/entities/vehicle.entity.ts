@@ -44,4 +44,16 @@ export class Vehicle {
   @JoinColumn({ name: 'company_id' })
   company?: Company; // Empresa a la que pertenece
 
+  @Column({ name: 'engine_number', length: 60, nullable: true })
+  engineNumber?: string; // Numero de motor
+
+  @Column({ name: 'chassis_number', length: 60, nullable: true })
+  chassisNumber?: string; // Numero de chasis
+
+  @Column({ name: 'line', length: 60, nullable: true })
+  line?: string; // Linea
+
+  @Column({ type: 'date', name: 'entry_date', nullable: true })
+  entryDate?: string; // Fecha de ingreso
+
 }

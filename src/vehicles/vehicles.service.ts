@@ -36,6 +36,10 @@ export class VehiclesService {
         model: data.model,
         internalNumber: data.internalNumber,
         mobileNumber: data.mobileNumber,
+        engineNumber: data.engineNumber,
+        chassisNumber: data.chassisNumber,
+        line: data.line,
+        entryDate: data.entryDate,
         make: { id: data.makeId } as any,
         insurer: data.insurerId ? ({ id: data.insurerId } as any) : undefined,
         communicationCompany: data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : undefined,
@@ -61,6 +65,10 @@ export class VehiclesService {
           model: data.model,
           internalNumber: data.internalNumber,
           mobileNumber: data.mobileNumber,
+          engineNumber: data.engineNumber,
+          chassisNumber: data.chassisNumber,
+          line: data.line,
+          entryDate: data.entryDate,
           make: { id: data.makeId } as any,
           insurer: data.insurerId ? ({ id: data.insurerId } as any) : undefined,
           communicationCompany: data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : undefined,
@@ -87,6 +95,10 @@ export class VehiclesService {
     if (data.model !== undefined) existing.model = data.model;
     if (data.internalNumber !== undefined) existing.internalNumber = data.internalNumber;
     if (data.mobileNumber !== undefined) existing.mobileNumber = data.mobileNumber;
+    if (data.engineNumber !== undefined) existing.engineNumber = data.engineNumber;
+    if (data.chassisNumber !== undefined) existing.chassisNumber = data.chassisNumber;
+    if (data.line !== undefined) existing.line = data.line;
+    if (data.entryDate !== undefined) existing.entryDate = data.entryDate;
 
     // Actualizar relaciones si los IDs vienen en el DTO
     if (data.makeId !== undefined) existing.make = { id: data.makeId } as any;

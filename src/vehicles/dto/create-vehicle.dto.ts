@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsPositive, IsString, Length } from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Length } from 'class-validator';
 
 export class CreateVehicleDto {
   @IsString()
@@ -20,6 +20,25 @@ export class CreateVehicleDto {
   @IsNotEmpty()
   @Length(1, 20)
   mobileNumber: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  engineNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  chassisNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  line?: string;
+
+  @IsOptional()
+  @IsDateString()
+  entryDate?: string;
 
   @IsInt()
   @IsPositive()
