@@ -16,10 +16,10 @@ export class CreateVehicleDto {
   @Length(1, 30)
   internalNumber: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Length(1, 20)
-  mobileNumber: string;
+  mobileNumber?: string;
 
   @IsOptional()
   @IsString()
