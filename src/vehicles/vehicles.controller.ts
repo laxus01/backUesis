@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -20,6 +20,21 @@ export class VehiclesController {
   @Post()
   async create(@Body() data: CreateVehicleDto) {
     return this.vehiclesService.create(data);
+  }
+
+  @Post('bulk')
+  async createMany(@Body() body: any) {
+    let data: any = body;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { /* ignore */ }
+    }
+    if (data && !Array.isArray(data) && Array.isArray((data as any).items)) {
+      data = (data as any).items;
+    }
+    if (!Array.isArray(data)) {
+      throw new BadRequestException('Body must be a JSON array of CreateVehicleDto');
+    }
+    return this.vehiclesService.createMany(data as CreateVehicleDto[]);
   }
 
   @Put(':id')

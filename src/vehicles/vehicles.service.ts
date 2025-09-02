@@ -51,6 +51,32 @@ export class VehiclesService {
     }
   }
 
+  async createMany(items: CreateVehicleDto[]) {
+    const created: Vehicle[] = [];
+    const failed: Array<{ input: CreateVehicleDto; reason: string }> = [];
+    for (const data of items) {
+      try {
+        const entity = this.vehiclesRepository.create({
+          plate: data.plate,
+          model: data.model,
+          internalNumber: data.internalNumber,
+          mobileNumber: data.mobileNumber,
+          make: { id: data.makeId } as any,
+          insurer: data.insurerId ? ({ id: data.insurerId } as any) : undefined,
+          communicationCompany: data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : undefined,
+          owner: data.ownerId ? ({ id: data.ownerId } as any) : undefined,
+          company: { id: data.companyId } as any,
+        });
+        const saved = await this.vehiclesRepository.save(entity);
+        created.push(saved);
+      } catch (error: any) {
+        if (error?.code === 'ER_DUP_ENTRY') failed.push({ input: data, reason: 'Vehicle already exists (duplicate plate)' });
+        else failed.push({ input: data, reason: 'Error creating vehicle' });
+      }
+    }
+    return { created, failed };
+  }
+
   async update(id: number, data: UpdateVehicleDto) {
     const existing = await this.vehiclesRepository.findOne({ where: { id } });
     if (!existing) {
