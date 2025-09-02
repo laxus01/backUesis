@@ -1,9 +1,10 @@
-import { IsInt, IsNotEmpty, IsPositive, IsString, Length, MaxLength } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Length, MaxLength } from 'class-validator';
 
 export class CreateAdministrationDto {
+  @IsOptional()
   @IsString()
   @Length(10, 10) // YYYY-MM-DD
-  date: string;
+  date?: string;
 
   @IsInt()
   @IsPositive()
@@ -20,4 +21,8 @@ export class CreateAdministrationDto {
   @IsInt()
   @IsPositive()
   vehicleId: number;
+
+  @IsInt()
+  @IsPositive()
+  userId: number;
 }

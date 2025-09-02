@@ -1,12 +1,13 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('administrations')
 export class Administration {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date: string; // YYYY-MM-DD
 
   @Column({ type: 'int' })
@@ -21,4 +22,8 @@ export class Administration {
   @ManyToOne(() => Vehicle, { eager: false, nullable: false })
   @JoinColumn({ name: 'vehicle_id' })
   vehicle: Vehicle;
+
+  @ManyToOne(() => User, { eager: false, nullable: false })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 }

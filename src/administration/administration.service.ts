@@ -6,12 +6,14 @@ import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { DateRangeDto } from './dto/date-range.dto';
 import { VehicleIdDto } from './dto/vehicle-id.dto';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AdministrationService {
   constructor(
     @InjectRepository(Administration) private readonly adminRepo: Repository<Administration>,
     @InjectRepository(Vehicle) private readonly vehicleRepo: Repository<Vehicle>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
   ) {}
 
   async create(dto: CreateAdministrationDto): Promise<Administration> {
@@ -19,12 +21,14 @@ export class AdministrationService {
     if (!vehicle) throw new NotFoundException('Vehicle not found');
 
     const entity = new Administration();
-    entity.date = dto.date;
     // asegurar entero
     entity.value = Number.isInteger(dto.value) ? dto.value : Math.trunc(Number(dto.value));
     entity.detail = dto.detail.trim();
     entity.payer = dto.payer.trim();
     entity.vehicle = vehicle;
+    const user = await this.userRepo.findOne({ where: { id: dto.userId } });
+    if (!user) throw new NotFoundException('User not found');
+    entity.user = user;
     return this.adminRepo.save(entity);
   }
 
@@ -33,6 +37,7 @@ export class AdministrationService {
     const failed: Array<{ input: CreateAdministrationDto; reason: string }> = [];
     // cache simple de vehículos por id para reducir consultas repetidas
     const vehicleCache = new Map<number, Vehicle | null>();
+    const userCache = new Map<number, User | null>();
     for (const dto of items) {
       try {
         let vehicle = vehicleCache.get(dto.vehicleId) ?? null;
@@ -44,12 +49,21 @@ export class AdministrationService {
           failed.push({ input: dto, reason: 'Vehicle not found' });
           continue;
         }
+        let user = userCache.get(dto.userId) ?? null;
+        if (user === null && !userCache.has(dto.userId)) {
+          user = await this.userRepo.findOne({ where: { id: dto.userId } });
+          userCache.set(dto.userId, user ?? null);
+        }
+        if (!user) {
+          failed.push({ input: dto, reason: 'User not found' });
+          continue;
+        }
         const entity = new Administration();
-        entity.date = dto.date;
         entity.value = Number.isInteger(dto.value) ? dto.value : Math.trunc(Number(dto.value));
         entity.detail = dto.detail.trim();
         entity.payer = dto.payer.trim();
         entity.vehicle = vehicle;
+        entity.user = user;
         const saved = await this.adminRepo.save(entity);
         created.push(saved);
       } catch (e: any) {
@@ -76,8 +90,8 @@ export class AdministrationService {
     const { vehicleId } = dto;
     return this.adminRepo.find({
       where: { vehicle: { id: vehicleId } },
-      relations: { vehicle: true },
-      order: { date: 'ASC', id: 'ASC' },
+      relations: { vehicle: true, user: true },
+      order: { date: 'DESC', id: 'DESC' },
     });
   }
 }
