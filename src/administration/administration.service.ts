@@ -28,6 +28,37 @@ export class AdministrationService {
     return this.adminRepo.save(entity);
   }
 
+  async createMany(items: CreateAdministrationDto[]) {
+    const created: Administration[] = [];
+    const failed: Array<{ input: CreateAdministrationDto; reason: string }> = [];
+    // cache simple de vehículos por id para reducir consultas repetidas
+    const vehicleCache = new Map<number, Vehicle | null>();
+    for (const dto of items) {
+      try {
+        let vehicle = vehicleCache.get(dto.vehicleId) ?? null;
+        if (vehicle === null && !vehicleCache.has(dto.vehicleId)) {
+          vehicle = await this.vehicleRepo.findOne({ where: { id: dto.vehicleId } });
+          vehicleCache.set(dto.vehicleId, vehicle ?? null);
+        }
+        if (!vehicle) {
+          failed.push({ input: dto, reason: 'Vehicle not found' });
+          continue;
+        }
+        const entity = new Administration();
+        entity.date = dto.date;
+        entity.value = Number.isInteger(dto.value) ? dto.value : Math.trunc(Number(dto.value));
+        entity.detail = dto.detail.trim();
+        entity.payer = dto.payer.trim();
+        entity.vehicle = vehicle;
+        const saved = await this.adminRepo.save(entity);
+        created.push(saved);
+      } catch (e: any) {
+        failed.push({ input: dto, reason: 'Error creating administration' });
+      }
+    }
+    return { created, failed };
+  }
+
   async findAll(): Promise<Administration[]> {
     return this.adminRepo.find({ relations: { vehicle: true } });
   }
