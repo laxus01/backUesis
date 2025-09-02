@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { DateRangeDto } from './dto/date-range.dto';
@@ -33,6 +33,11 @@ export class AdministrationController {
     return this.service.findAll();
   }
 
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(id);
+  }
+
   @Post('date-range')
   async findByDateRange(@Body() dto: DateRangeDto) {
     return this.service.findByDateRange(dto);
@@ -44,7 +49,7 @@ export class AdministrationController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: number) {
+  async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
 

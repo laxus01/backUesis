@@ -98,6 +98,17 @@ export class AdministrationService {
     });
   }
 
+  async findOne(id: number): Promise<Administration> {
+    const admin = await this.adminRepo.findOne({
+      where: { id },
+      relations: { vehicle: true, user: true },
+    });
+    if (!admin) {
+      throw new NotFoundException('Administration not found');
+    }
+    return admin;
+  }
+
   async remove(id: number): Promise<void> {
     await this.adminRepo.delete(id);
   }
