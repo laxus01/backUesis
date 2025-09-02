@@ -44,6 +44,43 @@ export class DriversService {
     }
   }
 
+  // Bulk create multiple drivers. Does not fail the whole batch on single errors.
+  async createMany(data: CreateDriverDto[]) {
+    const created: Driver[] = [];
+    const errors: { index: number; identification?: string; message: string }[] = [];
+
+    for (let i = 0; i < (data?.length ?? 0); i++) {
+      const dto = data[i];
+      try {
+        const entity = this.repo.create({
+          identification: dto.identification,
+          issuedIn: dto.issuedIn,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          phone: dto.phone,
+          address: dto.address,
+          license: dto.license,
+          category: dto.category,
+          expiresOn: dto.expiresOn,
+          bloodType: dto.bloodType,
+          photo: dto.photo,
+          eps: dto.epsId ? ({ id: dto.epsId } as any) : undefined,
+          arl: dto.arlId ? ({ id: dto.arlId } as any) : undefined,
+        });
+        const saved = await this.repo.save(entity);
+        created.push(saved);
+      } catch (e: any) {
+        if (e?.code === 'ER_DUP_ENTRY') {
+          errors.push({ index: i, identification: dto?.identification, message: 'Driver already exists (duplicate identification)' });
+        } else {
+          errors.push({ index: i, identification: dto?.identification, message: 'Error creating driver' });
+        }
+      }
+    }
+
+    return { created, errors };
+  }
+
   async update(id: number, data: UpdateDriverDto) {
     const existing = await this.findOne(id);
     if (!existing) throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);

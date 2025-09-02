@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, ParseArrayPipe } from '@nestjs/common';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -35,6 +35,12 @@ export class DriversController {
     };
   }
   @Post() create(@Body() data: CreateDriverDto) { return this.service.create(data); }
+  @Post('bulk')
+  createMany(
+    @Body(new ParseArrayPipe({ items: CreateDriverDto })) data: CreateDriverDto[],
+  ) {
+    return this.service.createMany(data);
+  }
   @Put(':id') update(@Param('id') id: string, @Body() data: UpdateDriverDto) { return this.service.update(Number(id), data); }
   @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(Number(id)); }
 }
