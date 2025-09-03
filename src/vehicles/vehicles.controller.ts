@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { CreateManyVehiclesPipe } from './pipes/create-many-vehicles.pipe';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -8,13 +9,16 @@ export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) { }
 
   @Get()
-  async findAll(@Query('plate') plate?: string, @Query('companyId') companyId?: string) {
-    return this.vehiclesService.findAll(plate, companyId ? Number(companyId) : undefined);
+  async findAll(
+    @Query('plate') plate?: string,
+    @Query('companyId', new ParseIntPipe({ optional: true })) companyId?: number,
+  ) {
+    return this.vehiclesService.findAll(plate, companyId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.vehiclesService.findOne(Number(id));
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.vehiclesService.findOne(id);
   }
 
   @Post()
@@ -23,27 +27,17 @@ export class VehiclesController {
   }
 
   @Post('bulk')
-  async createMany(@Body() body: any) {
-    let data: any = body;
-    if (typeof data === 'string') {
-      try { data = JSON.parse(data); } catch { /* ignore */ }
-    }
-    if (data && !Array.isArray(data) && Array.isArray((data as any).items)) {
-      data = (data as any).items;
-    }
-    if (!Array.isArray(data)) {
-      throw new BadRequestException('Body must be a JSON array of CreateVehicleDto');
-    }
-    return this.vehiclesService.createMany(data as CreateVehicleDto[]);
+  async createMany(@Body(CreateManyVehiclesPipe) data: CreateVehicleDto[]) {
+    return this.vehiclesService.createMany(data);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: UpdateVehicleDto) {
-    return this.vehiclesService.update(Number(id), data);
+  async update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateVehicleDto) {
+    return this.vehiclesService.update(id, data);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.vehiclesService.remove(Number(id));
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    return this.vehiclesService.remove(id);
   }
 }

@@ -6,106 +6,95 @@ import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
-export class UsersService implements OnModuleInit {
+export class UsersService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
   ) { }
 
-  async onModuleInit() {
-    const user = await this.userRepository.findOne({
-      where: { user: 'testuser_2025' },
-    });
-
-    if (!user) {
-      const newUser: CreateUserDto = {
-        user: 'testuser_2025',
-        password: 'password123',
-        permissions: 'user',
-        name: 'Test User',
-      };
-      await this.createUser(newUser);
-      console.log('Default user created.');
-    }
-  }
 
   async getUsers() {
     const users = await this.userRepository.find({ relations: ['company'] });
-    return users.map(({ password, ...rest }) => rest);
+    return users.map(user => this.sanitizeUser(user));
   }
 
   async getUserById(id: number) {
-    const found = await this.userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id },
       relations: ['company'],
     });
-    if (!found) return null as any;
-    const { password, ...rest } = found as any;
-    return rest;
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+    return this.sanitizeUser(user);
   }
 
-  async createUser(user: CreateUserDto) {
+  async createUser(userData: CreateUserDto) {
     try {
-      const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(user.password, salt);
-      const userToCreate: any = {
-        user: user.user,
+      const hashedPassword = await this._hashPassword(userData.password);
+
+      const userToCreate: Partial<User> = {
+        ...userData,
         password: hashedPassword,
-        permissions: user.permissions,
-        name: user.name,
+        company: userData.companyId ? { id: userData.companyId } as any : null,
       };
-      if (user.companyId) {
-        userToCreate.company = { id: user.companyId } as any;
-      }
+
       const newUser = this.userRepository.create(userToCreate);
-      const saved = await this.userRepository.save(newUser);
-      const { password, ...rest } = saved as any;
-      return rest;
+      const savedUser = await this.userRepository.save(newUser);
+      return this.sanitizeUser(savedUser);
     } catch (error) {
-      console.error('Error creating user:', error);
       if (error.code === 'ER_DUP_ENTRY') {
-        // Specific to MySQL for duplicate entry
         throw new HttpException('User already exists', HttpStatus.CONFLICT);
       }
-      throw new HttpException(
-        'Error creating user',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      throw new HttpException('Error creating user', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async updateUser(id: number, user: Partial<CreateUserDto>) {
-    const existingUser = await this.userRepository.findOne({
-      where: { id },
+  async updateUser(id: number, userData: Partial<CreateUserDto>) {
+    if (userData.password) {
+      userData.password = await this._hashPassword(userData.password);
+    }
+
+    const userToUpdate = await this.userRepository.preload({
+      id,
+      ...userData,
+      company: userData.companyId ? { id: userData.companyId } as any : undefined,
     });
-    if (!existingUser) {
-      throw new Error('User not found');
+
+    if (!userToUpdate) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
 
-    if (user.password) {
-      const salt = await bcrypt.genSalt();
-      user.password = await bcrypt.hash(user.password, salt);
+    try {
+      const savedUser = await this.userRepository.save(userToUpdate);
+      return this.sanitizeUser(savedUser);
+    } catch (error) {
+      if (error.code === 'ER_DUP_ENTRY') {
+        throw new HttpException('User already exists', HttpStatus.CONFLICT);
+      }
+      throw new HttpException('Error updating user', HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
 
-    // Map relation update if provided
-    if (user.companyId !== undefined) {
-      (existingUser as any).company = user.companyId ? ({ id: user.companyId } as any) : null as any;
-    }
-    const updatedUser = { ...existingUser, ...user } as any;
-    const saved = await this.userRepository.save(updatedUser);
-    const { password, ...rest } = saved as any;
-    return rest;
+  async findOneByUserForAuth(username: string): Promise<User | undefined> {
+    return this.userRepository.findOne({ where: { user: username }, relations: ['company'] });
   }
 
   async deleteUser(id: number) {
-    const existingUser = await this.userRepository.findOne({
-      where: { id },
-      relations: ['company'],
-    });
-    if (!existingUser) {
-      throw new Error('User not found');
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
-    const removed = await this.userRepository.remove(existingUser);
-    const { password, ...rest } = removed as any;
+    const removedUser = await this.userRepository.remove(user);
+    return this.sanitizeUser(removedUser);
+  }
+
+  sanitizeUser(user: User) {
+    const { password, ...rest } = user;
     return rest;
+  }
+
+  private async _hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt();
+    return bcrypt.hash(password, salt);
   }
 }

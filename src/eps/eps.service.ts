@@ -12,26 +12,46 @@ export class EpsService {
   ) { }
 
   findAll() { return this.repo.find(); }
-  findOne(id: number) { return this.repo.findOne({ where: { id } }); }
+  async findOne(id: number) {
+    const eps = await this.repo.findOne({ where: { id } });
+    if (!eps) {
+      throw new HttpException('Eps not found', HttpStatus.NOT_FOUND);
+    }
+    return eps;
+  }
 
   async create(data: CreateEpsDto) {
-    try { return await this.repo.save(this.repo.create(data)); }
-    catch (e: any) {
-      if (e?.code === 'ER_DUP_ENTRY') throw new HttpException('Eps already exists', HttpStatus.CONFLICT);
-      throw new HttpException('Error creating eps', HttpStatus.INTERNAL_SERVER_ERROR);
+    try {
+      const newEps = this.repo.create(data);
+      return await this.repo.save(newEps);
+    } catch (error) {
+      this._handleError(error);
     }
   }
 
   async update(id: number, data: UpdateEpsDto) {
-    const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Eps not found', HttpStatus.NOT_FOUND);
-    Object.assign(existing, data);
-    return this.repo.save(existing);
+    const epsToUpdate = await this.repo.preload({ id, ...data });
+
+    if (!epsToUpdate) {
+      throw new HttpException('Eps not found', HttpStatus.NOT_FOUND);
+    }
+
+    try {
+      return await this.repo.save(epsToUpdate);
+    } catch (error) {
+      this._handleError(error);
+    }
   }
 
   async remove(id: number) {
-    const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Eps not found', HttpStatus.NOT_FOUND);
-    return this.repo.remove(existing);
+    const eps = await this.findOne(id);
+    return this.repo.remove(eps);
+  }
+
+  private _handleError(error: any) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      throw new HttpException('Eps already exists', HttpStatus.CONFLICT);
+    }
+    throw new HttpException('An unexpected error occurred', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }

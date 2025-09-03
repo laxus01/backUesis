@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put } from '@nestjs/common';
 import { ArlService } from './arl.service';
 import { CreateArlDto } from './dto/create-arl.dto';
 import { UpdateArlDto } from './dto/update-arl.dto';
@@ -7,9 +7,24 @@ import { UpdateArlDto } from './dto/update-arl.dto';
 export class ArlController {
   constructor(private readonly service: ArlService) { }
 
-  @Get() findAll() { return this.service.findAll(); }
-  @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }
-  @Post() create(@Body() data: CreateArlDto) { return this.service.create(data); }
-  @Put(':id') update(@Param('id') id: string, @Body() data: UpdateArlDto) { return this.service.update(Number(id), data); }
-  @Delete(':id') remove(@Param('id') id: string) { return this.service.remove(Number(id)); }
+  @Get()
+  findAll() {
+    return this.service.findAll();
+  }
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.service.findOne(id);
+  }
+  @Post()
+  create(@Body() data: CreateArlDto) {
+    return this.service.create(data);
+  }
+  @Put(':id')
+  update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateArlDto) {
+    return this.service.update(id, data);
+  }
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.service.remove(id);
+  }
 }

@@ -38,27 +38,10 @@ export class VehiclesService {
 
   async create(data: CreateVehicleDto) {
     try {
-      const entity = this.vehiclesRepository.create({
-        plate: data.plate,
-        model: data.model,
-        internalNumber: data.internalNumber,
-        mobileNumber: data.mobileNumber,
-        engineNumber: data.engineNumber,
-        chassisNumber: data.chassisNumber,
-        line: data.line,
-        entryDate: data.entryDate,
-        make: { id: data.makeId } as any,
-        insurer: data.insurerId ? ({ id: data.insurerId } as any) : undefined,
-        communicationCompany: data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : undefined,
-        owner: data.ownerId ? ({ id: data.ownerId } as any) : undefined,
-        company: { id: data.companyId } as any,
-      });
+      const entity = this.vehiclesRepository.create(this._dtoToEntity(data));
       return await this.vehiclesRepository.save(entity);
-    } catch (error: any) {
-      if (error?.code === 'ER_DUP_ENTRY') {
-        throw new HttpException('Vehicle already exists (duplicate plate)', HttpStatus.CONFLICT);
-      }
-      throw new HttpException('Error creating vehicle', HttpStatus.INTERNAL_SERVER_ERROR);
+    } catch (error) {
+      this._handleError(error);
     }
   }
 
@@ -67,62 +50,60 @@ export class VehiclesService {
     const failed: Array<{ input: CreateVehicleDto; reason: string }> = [];
     for (const data of items) {
       try {
-        const entity = this.vehiclesRepository.create({
-          plate: data.plate,
-          model: data.model,
-          internalNumber: data.internalNumber,
-          mobileNumber: data.mobileNumber,
-          engineNumber: data.engineNumber,
-          chassisNumber: data.chassisNumber,
-          line: data.line,
-          entryDate: data.entryDate,
-          make: { id: data.makeId } as any,
-          insurer: data.insurerId ? ({ id: data.insurerId } as any) : undefined,
-          communicationCompany: data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : undefined,
-          owner: data.ownerId ? ({ id: data.ownerId } as any) : undefined,
-          company: { id: data.companyId } as any,
-        });
+        const entity = this.vehiclesRepository.create(this._dtoToEntity(data));
         const saved = await this.vehiclesRepository.save(entity);
         created.push(saved);
       } catch (error: any) {
-        if (error?.code === 'ER_DUP_ENTRY') failed.push({ input: data, reason: 'Vehicle already exists (duplicate plate)' });
-        else failed.push({ input: data, reason: 'Error creating vehicle' });
+        const reason = error?.code === 'ER_DUP_ENTRY'
+          ? 'Vehicle already exists (duplicate plate)'
+          : error.message || 'Error creating vehicle';
+        failed.push({ input: data, reason });
       }
     }
     return { created, failed };
   }
 
   async update(id: number, data: UpdateVehicleDto) {
-    const existing = await this.vehiclesRepository.findOne({ where: { id } });
-    if (!existing) {
+    const updateData = this._dtoToEntity(data);
+    const vehicleToUpdate = await this.vehiclesRepository.preload({
+      id,
+      ...updateData,
+    });
+
+    if (!vehicleToUpdate) {
       throw new HttpException('Vehicle not found', HttpStatus.NOT_FOUND);
     }
-    // Actualizar campos escalares si vienen en el DTO
-    if (data.plate !== undefined) existing.plate = data.plate;
-    if (data.model !== undefined) existing.model = data.model;
-    if (data.internalNumber !== undefined) existing.internalNumber = data.internalNumber;
-    if (data.mobileNumber !== undefined) existing.mobileNumber = data.mobileNumber;
-    if (data.engineNumber !== undefined) existing.engineNumber = data.engineNumber;
-    if (data.chassisNumber !== undefined) existing.chassisNumber = data.chassisNumber;
-    if (data.line !== undefined) existing.line = data.line;
-    if (data.entryDate !== undefined) existing.entryDate = data.entryDate;
 
-    // Actualizar relaciones si los IDs vienen en el DTO
-    if (data.makeId !== undefined) existing.make = { id: data.makeId } as any;
-    if (data.insurerId !== undefined) existing.insurer = data.insurerId ? ({ id: data.insurerId } as any) : null as any;
-    if (data.communicationCompanyId !== undefined) existing.communicationCompany = data.communicationCompanyId ? ({ id: data.communicationCompanyId } as any) : null as any;
-    if (data.ownerId !== undefined) existing.owner = data.ownerId ? ({ id: data.ownerId } as any) : null as any;
-    if (data.companyId !== undefined) existing.company = data.companyId ? ({ id: data.companyId } as any) : null as any;
-
-    const merged = existing;
     try {
-      return await this.vehiclesRepository.save(merged);
-    } catch (error: any) {
-      if (error?.code === 'ER_DUP_ENTRY') {
-        throw new HttpException('Vehicle already exists (duplicate plate)', HttpStatus.CONFLICT);
-      }
-      throw new HttpException('Error updating vehicle', HttpStatus.INTERNAL_SERVER_ERROR);
+      return await this.vehiclesRepository.save(vehicleToUpdate);
+    } catch (error) {
+      this._handleError(error);
     }
+  }
+
+  private _dtoToEntity(data: Partial<CreateVehicleDto | UpdateVehicleDto>) {
+    const entity: Partial<Vehicle> = {};
+    if (data.plate !== undefined) entity.plate = data.plate;
+    if (data.model !== undefined) entity.model = data.model;
+    if (data.internalNumber !== undefined) entity.internalNumber = data.internalNumber;
+    if (data.mobileNumber !== undefined) entity.mobileNumber = data.mobileNumber;
+    if (data.engineNumber !== undefined) entity.engineNumber = data.engineNumber;
+    if (data.chassisNumber !== undefined) entity.chassisNumber = data.chassisNumber;
+    if (data.line !== undefined) entity.line = data.line;
+    if (data.entryDate !== undefined) entity.entryDate = data.entryDate;
+    if (data.makeId !== undefined) entity.make = { id: data.makeId } as any;
+    if (data.insurerId !== undefined) entity.insurer = data.insurerId ? { id: data.insurerId } as any : null;
+    if (data.communicationCompanyId !== undefined) entity.communicationCompany = data.communicationCompanyId ? { id: data.communicationCompanyId } as any : null;
+    if (data.ownerId !== undefined) entity.owner = data.ownerId ? { id: data.ownerId } as any : null;
+    if (data.companyId !== undefined) entity.company = { id: data.companyId } as any;
+    return entity;
+  }
+
+  private _handleError(error: any) {
+    if (error?.code === 'ER_DUP_ENTRY') {
+      throw new HttpException('Vehicle already exists (duplicate plate)', HttpStatus.CONFLICT);
+    }
+    throw new HttpException(error.message || 'Error processing request', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   async remove(id: number) {

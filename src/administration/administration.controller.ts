@@ -1,4 +1,5 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { CreateManyAdministrationPipe } from './pipes/create-many-administration.pipe';
 import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { DateRangeDto } from './dto/date-range.dto';
@@ -14,18 +15,8 @@ export class AdministrationController {
   }
 
   @Post('bulk')
-  async createMany(@Body() body: any) {
-    let data: any = body;
-    if (typeof data === 'string') {
-      try { data = JSON.parse(data); } catch { /* ignore */ }
-    }
-    if (data && !Array.isArray(data) && Array.isArray((data as any).items)) {
-      data = (data as any).items;
-    }
-    if (!Array.isArray(data)) {
-      throw new BadRequestException('Body must be a JSON array of CreateAdministrationDto');
-    }
-    return this.service.createMany(data as CreateAdministrationDto[]);
+  async createMany(@Body(CreateManyAdministrationPipe) data: CreateAdministrationDto[]) {
+    return this.service.createMany(data);
   }
 
   @Get()

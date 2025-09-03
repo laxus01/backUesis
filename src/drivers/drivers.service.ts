@@ -11,104 +11,107 @@ export class DriversService {
     @InjectRepository(Driver) private repo: Repository<Driver>,
   ) { }
 
-  findAll() { return this.repo.find(); }
-  findOne(id: number) { return this.repo.findOne({ where: { id }, relations: ['eps', 'arl'] }); }
+  async findAll() {
+    const drivers = await this.repo.find({ relations: ['eps', 'arl'] });
+    return drivers.map(driver => this._transformDriver(driver));
+  }
+  async findOne(id: number) {
+    const driver = await this.repo.findOne({ where: { id }, relations: ['eps', 'arl'] });
+    if (!driver) {
+      throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
+    }
+    return this._transformDriver(driver);
+  }
 
-  // Search by identification prefix (realtime autocomplete)
-  searchByIdentification(q: string) {
-    // Using prefix match; adjust to `%${q}%` for contains if needed
-    return this.repo.find({ where: { identification: Like(`${q}%`) }, take: 20, relations: ['eps', 'arl'] });
+  async searchByIdentification(q: string) {
+    const drivers = await this.repo.find({ where: { identification: Like(`${q}%`) }, take: 20, relations: ['eps', 'arl'] });
+    return drivers.map(driver => this._transformDriver(driver));
   }
 
   async create(data: CreateDriverDto) {
     try {
-      const entity = this.repo.create({
-        identification: data.identification,
-        issuedIn: data.issuedIn,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        address: data.address,
-        license: data.license,
-        category: data.category,
-        expiresOn: data.expiresOn,
-        bloodType: data.bloodType,
-        photo: data.photo,
-        eps: data.epsId ? ({ id: data.epsId } as any) : undefined,
-        arl: data.arlId ? ({ id: data.arlId } as any) : undefined,
-      });
-      return await this.repo.save(entity);
-    } catch (e: any) {
-      if (e?.code === 'ER_DUP_ENTRY') throw new HttpException('Driver already exists (duplicate identification)', HttpStatus.CONFLICT);
-      throw new HttpException('Error creating driver', HttpStatus.INTERNAL_SERVER_ERROR);
+      const entity = this.repo.create(this._dtoToEntity(data));
+      const savedDriver = await this.repo.save(entity);
+      return this._transformDriver(savedDriver);
+    } catch (error) {
+      this._handleError(error);
     }
   }
 
-  // Bulk create multiple drivers. Does not fail the whole batch on single errors.
   async createMany(data: CreateDriverDto[]) {
-    const created: Driver[] = [];
-    const errors: { index: number; identification?: string; message: string }[] = [];
+    const created: any[] = [];
+    const errors: { input: CreateDriverDto; reason: string }[] = [];
 
-    for (let i = 0; i < (data?.length ?? 0); i++) {
-      const dto = data[i];
+    for (const dto of data) {
       try {
-        const entity = this.repo.create({
-          identification: dto.identification,
-          issuedIn: dto.issuedIn,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.phone,
-          address: dto.address,
-          license: dto.license,
-          category: dto.category,
-          expiresOn: dto.expiresOn,
-          bloodType: dto.bloodType,
-          photo: dto.photo,
-          eps: dto.epsId ? ({ id: dto.epsId } as any) : undefined,
-          arl: dto.arlId ? ({ id: dto.arlId } as any) : undefined,
-        });
-        const saved = await this.repo.save(entity);
-        created.push(saved);
-      } catch (e: any) {
-        if (e?.code === 'ER_DUP_ENTRY') {
-          errors.push({ index: i, identification: dto?.identification, message: 'Driver already exists (duplicate identification)' });
-        } else {
-          errors.push({ index: i, identification: dto?.identification, message: 'Error creating driver' });
-        }
+        const entity = this.repo.create(this._dtoToEntity(dto));
+        const savedDriver = await this.repo.save(entity);
+        created.push(this._transformDriver(savedDriver));
+      } catch (error) {
+        const reason = error.code === 'ER_DUP_ENTRY' ? 'Driver already exists (duplicate identification)' : 'Error creating driver';
+        errors.push({ input: dto, reason });
       }
     }
 
-    return { created, errors };
+    return { created, failed: errors };
   }
 
   async update(id: number, data: UpdateDriverDto) {
-    const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
+    const driverToUpdate = await this.repo.preload({
+      id,
+      ...this._dtoToEntity(data),
+    });
 
-    if (data.identification !== undefined) existing.identification = data.identification;
-    if (data.issuedIn !== undefined) existing.issuedIn = data.issuedIn;
-    if (data.firstName !== undefined) existing.firstName = data.firstName;
-    if (data.lastName !== undefined) existing.lastName = data.lastName;
-    if (data.phone !== undefined) existing.phone = data.phone;
-    if (data.address !== undefined) existing.address = data.address;
-    if (data.license !== undefined) existing.license = data.license;
-    if (data.category !== undefined) existing.category = data.category;
-    if (data.expiresOn !== undefined) existing.expiresOn = data.expiresOn as any;
-    if (data.bloodType !== undefined) existing.bloodType = data.bloodType;
-    if (data.photo !== undefined) existing.photo = data.photo;
-    if (data.epsId !== undefined) existing.eps = data.epsId ? ({ id: data.epsId } as any) : null as any;
-    if (data.arlId !== undefined) existing.arl = data.arlId ? ({ id: data.arlId } as any) : null as any;
+    if (!driverToUpdate) {
+      throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
+    }
 
-    try { return await this.repo.save(existing); }
-    catch (e: any) {
-      if (e?.code === 'ER_DUP_ENTRY') throw new HttpException('Driver already exists (duplicate identification)', HttpStatus.CONFLICT);
-      throw new HttpException('Error updating driver', HttpStatus.INTERNAL_SERVER_ERROR);
+    try {
+      const savedDriver = await this.repo.save(driverToUpdate);
+      return this._transformDriver(savedDriver);
+    } catch (error) {
+      this._handleError(error);
     }
   }
 
   async remove(id: number) {
-    const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
-    return this.repo.remove(existing);
+    // findOne will throw NOT_FOUND if it doesn't exist
+    const driver = await this.repo.findOne({ where: { id } });
+    if (!driver) {
+        throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
+    }
+    return this.repo.remove(driver);
+  }
+
+  private _dtoToEntity(data: CreateDriverDto | UpdateDriverDto): Partial<Driver> {
+    const { epsId, arlId, ...rest } = data;
+    const entity: Partial<Driver> = { ...rest };
+
+    if (epsId !== undefined) {
+      entity.eps = epsId ? { id: epsId } as any : null;
+    }
+
+    if (arlId !== undefined) {
+      entity.arl = arlId ? { id: arlId } as any : null;
+    }
+
+    return entity;
+  }
+
+  private _transformDriver(driver: Driver) {
+    if (!driver) return null;
+    const { eps, arl, ...rest } = driver;
+    return {
+      ...rest,
+      epsId: eps?.id ?? null,
+      arlId: arl?.id ?? null,
+    };
+  }
+
+  private _handleError(error: any) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      throw new HttpException('Driver already exists (duplicate identification)', HttpStatus.CONFLICT);
+    }
+    throw new HttpException('An unexpected error occurred', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
