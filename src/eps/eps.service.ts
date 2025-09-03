@@ -9,7 +9,7 @@ import { UpdateEpsDto } from './dto/update-eps.dto';
 export class EpsService {
   constructor(
     @InjectRepository(Eps) private repo: Repository<Eps>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

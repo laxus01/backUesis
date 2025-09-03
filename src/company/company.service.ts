@@ -9,7 +9,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 export class CompanyService {
   constructor(
     @InjectRepository(Company) private repo: Repository<Company>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }
@@ -27,7 +27,7 @@ export class CompanyService {
     if (!existing) throw new HttpException('Company not found', HttpStatus.NOT_FOUND);
     Object.assign(existing, data);
     return this.repo.save(existing);
-    }
+  }
 
   async remove(id: number) {
     const existing = await this.findOne(id);

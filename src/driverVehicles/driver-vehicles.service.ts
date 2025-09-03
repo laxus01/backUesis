@@ -10,7 +10,7 @@ export class DriverVehiclesService {
   constructor(
     @InjectRepository(DriverVehicle) private repo: Repository<DriverVehicle>,
     @InjectRepository(Vehicle) private vehiclesRepo: Repository<Vehicle>,
-  ) {}
+  ) { }
 
   async create(data: CreateDriverVehicleDto, companyId?: number) {
     // If scoping by company, ensure vehicle belongs to the company

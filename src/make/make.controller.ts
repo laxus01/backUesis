@@ -5,7 +5,7 @@ import { UpdateMakeDto } from './dto/update-make.dto';
 
 @Controller('make')
 export class MakeController {
-  constructor(private readonly service: MakeService) {}
+  constructor(private readonly service: MakeService) { }
 
   @Get() findAll() { return this.service.findAll(); }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }

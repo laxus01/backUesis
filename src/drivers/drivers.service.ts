@@ -9,7 +9,7 @@ import { UpdateDriverDto } from './dto/update-driver.dto';
 export class DriversService {
   constructor(
     @InjectRepository(Driver) private repo: Repository<Driver>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id }, relations: ['eps', 'arl'] }); }

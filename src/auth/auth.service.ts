@@ -11,7 +11,7 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
     private jwtAuthService: JwtService,
-  ) {}
+  ) { }
 
   async login(userObjectLogin: LoginAuthDto) {
     const { user, password } = userObjectLogin;

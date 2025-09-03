@@ -5,7 +5,7 @@ import { UpdateCommunicationCompanyDto } from './dto/update-communication-compan
 
 @Controller('communication-company')
 export class CommunicationCompanyController {
-  constructor(private readonly service: CommunicationCompanyService) {}
+  constructor(private readonly service: CommunicationCompanyService) { }
 
   @Get() findAll() { return this.service.findAll(); }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }

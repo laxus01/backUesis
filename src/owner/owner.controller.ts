@@ -5,7 +5,7 @@ import { UpdateOwnerDto } from './dto/update-owner.dto';
 
 @Controller('owner')
 export class OwnerController {
-  constructor(private readonly service: OwnerService) {}
+  constructor(private readonly service: OwnerService) { }
 
   @Get()
   findAll(@Query('name') name?: string, @Query('identification') identification?: string) {

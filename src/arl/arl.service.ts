@@ -9,7 +9,7 @@ import { UpdateArlDto } from './dto/update-arl.dto';
 export class ArlService {
   constructor(
     @InjectRepository(Arl) private repo: Repository<Arl>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

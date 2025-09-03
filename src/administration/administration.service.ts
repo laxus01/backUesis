@@ -14,7 +14,7 @@ export class AdministrationService {
     @InjectRepository(Administration) private readonly adminRepo: Repository<Administration>,
     @InjectRepository(Vehicle) private readonly vehicleRepo: Repository<Vehicle>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   async create(dto: CreateAdministrationDto): Promise<Administration> {
     const vehicle = await this.vehicleRepo.findOne({ where: { id: dto.vehicleId } });

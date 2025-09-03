@@ -5,7 +5,7 @@ import { TaxiCertificateDto } from './dto/taxi-certificate.dto';
 
 @Controller('documents')
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(private readonly documentsService: DocumentsService) { }
 
   @Post('taxi-certificate/:ownerId')
   async getTaxiCertificate(

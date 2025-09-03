@@ -9,7 +9,7 @@ import { UpdateOwnerDto } from './dto/update-owner.dto';
 export class OwnerService {
   constructor(
     @InjectRepository(Owner) private repo: Repository<Owner>,
-  ) {}
+  ) { }
 
   findAll(name?: string, identification?: string) {
     const where: any = {};

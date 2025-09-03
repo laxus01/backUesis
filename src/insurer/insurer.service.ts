@@ -9,7 +9,7 @@ import { UpdateInsurerDto } from './dto/update-insurer.dto';
 export class InsurerService {
   constructor(
     @InjectRepository(Insurer) private repo: Repository<Insurer>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

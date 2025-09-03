@@ -6,7 +6,7 @@ import { VehicleIdDto } from './dto/vehicle-id.dto';
 
 @Controller('administrations')
 export class AdministrationController {
-  constructor(private readonly service: AdministrationService) {}
+  constructor(private readonly service: AdministrationService) { }
 
   @Post()
   async create(@Body() dto: CreateAdministrationDto) {

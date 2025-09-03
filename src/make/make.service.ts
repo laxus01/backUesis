@@ -9,7 +9,7 @@ import { UpdateMakeDto } from './dto/update-make.dto';
 export class MakeService {
   constructor(
     @InjectRepository(Make) private repo: Repository<Make>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

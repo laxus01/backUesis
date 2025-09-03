@@ -9,7 +9,7 @@ import { UpdateCommunicationCompanyDto } from './dto/update-communication-compan
 export class CommunicationCompanyService {
   constructor(
     @InjectRepository(CommunicationCompany) private repo: Repository<CommunicationCompany>,
-  ) {}
+  ) { }
 
   findAll() { return this.repo.find(); }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

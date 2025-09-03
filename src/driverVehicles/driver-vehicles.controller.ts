@@ -4,7 +4,7 @@ import { CreateDriverVehicleDto } from './dto/create-driver-vehicle.dto';
 
 @Controller('driver-vehicles')
 export class DriverVehiclesController {
-  constructor(private readonly service: DriverVehiclesService) {}
+  constructor(private readonly service: DriverVehiclesService) { }
 
   @Get()
   findAll(@Headers('x-company-id') companyId: string) {

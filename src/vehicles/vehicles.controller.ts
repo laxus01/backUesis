@@ -5,7 +5,7 @@ import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
-  constructor(private readonly vehiclesService: VehiclesService) {}
+  constructor(private readonly vehiclesService: VehiclesService) { }
 
   @Get()
   async findAll(@Query('plate') plate?: string, @Query('companyId') companyId?: string) {

@@ -14,7 +14,7 @@ export class DocumentsService {
   constructor(
     private readonly ownerService: OwnerService,
     private readonly vehiclesService: VehiclesService,
-  ) {}
+  ) { }
 
   async generateTaxiCertificate(ownerId: number, dto: TaxiCertificateDto, @Res() res: Response) {
     // Fetch data before starting PDF stream

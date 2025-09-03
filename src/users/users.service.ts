@@ -9,7 +9,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     const user = await this.userRepository.findOne({
@@ -43,7 +43,7 @@ export class UsersService implements OnModuleInit {
     return rest;
   }
 
-    async createUser(user: CreateUserDto) {
+  async createUser(user: CreateUserDto) {
     try {
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(user.password, salt);
@@ -73,7 +73,7 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-    async updateUser(id: number, user: Partial<CreateUserDto>) {
+  async updateUser(id: number, user: Partial<CreateUserDto>) {
     const existingUser = await this.userRepository.findOne({
       where: { id },
     });

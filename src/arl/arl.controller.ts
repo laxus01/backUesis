@@ -5,7 +5,7 @@ import { UpdateArlDto } from './dto/update-arl.dto';
 
 @Controller('arl')
 export class ArlController {
-  constructor(private readonly service: ArlService) {}
+  constructor(private readonly service: ArlService) { }
 
   @Get() findAll() { return this.service.findAll(); }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }

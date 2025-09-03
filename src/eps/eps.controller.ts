@@ -5,7 +5,7 @@ import { UpdateEpsDto } from './dto/update-eps.dto';
 
 @Controller('eps')
 export class EpsController {
-  constructor(private readonly service: EpsService) {}
+  constructor(private readonly service: EpsService) { }
 
   @Get() findAll() { return this.service.findAll(); }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }

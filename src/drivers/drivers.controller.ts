@@ -5,7 +5,7 @@ import { UpdateDriverDto } from './dto/update-driver.dto';
 
 @Controller('drivers')
 export class DriversController {
-  constructor(private readonly service: DriversService) {}
+  constructor(private readonly service: DriversService) { }
 
   @Get()
   async find(@Query('identification') identification?: string) {

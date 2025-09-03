@@ -5,7 +5,7 @@ import { UpdateInsurerDto } from './dto/update-insurer.dto';
 
 @Controller('insurer')
 export class InsurerController {
-  constructor(private readonly service: InsurerService) {}
+  constructor(private readonly service: InsurerService) { }
 
   @Get() findAll() { return this.service.findAll(); }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }
