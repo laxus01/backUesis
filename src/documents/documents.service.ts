@@ -103,10 +103,10 @@ export class DocumentsService {
 
     doc.moveDown();
 
-    const entryDateText = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'N/D';
-    const entryDateField = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : undefined;
-    const ownerName = owner.name ?? 'N/D';
-    const ownerIdentification = owner.identification ?? 'N/D';
+    const entryDateText = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'SIN REGISTRAR';
+    const entryDateField = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'SIN REGISTRAR';
+    const ownerName = owner.name;
+    const ownerIdentification = owner.identification;
     // Owner paragraph with owner's name in bold
     doc.fontSize(12);
     doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify' });
