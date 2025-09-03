@@ -74,7 +74,7 @@ export class DocumentsService {
       .text(
         sanitize('EL SUSCRITO GERENTE Y REPRESENTANTE LEGAL DE LA COOPERATIVA DE TRANSPORTE DE CONDUCTORES ASOCIADOS DE SINCELEJO “COOTRANSCAS”'),
         {
-          align: 'justify'
+          align: 'center'
         },
       );
     // Restore normal font
@@ -108,13 +108,13 @@ export class DocumentsService {
     const ownerIdentification = owner.identification ?? 'N/D';
     // Owner paragraph with owner's name in bold
     doc.fontSize(12);
-    doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify' });
+    doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify', lineBreak: false });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(ownerName), { continued: true });
+    doc.text(sanitize(ownerName), { continued: true, lineBreak: false });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     doc.text(
       sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante,`),
-      { align: 'justify' },
+      { continued: true, align: 'justify', lineBreak: false },
     );
 
     // Immediately continue with income sentence after the previous phrase
@@ -125,15 +125,15 @@ export class DocumentsService {
     }).format(dto.amountNumber);
     // Income sentence with amount words and number in bold
     doc.fontSize(12);
-    doc.text(sanitize('el cual genera unos Ingresos Mensuales de '), { continued: true, align: 'justify' });
+    doc.text(sanitize('el cual genera unos Ingresos Mensuales de '), { continued: true, align: 'justify', lineBreak: false });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(dto.amountWords), { continued: true });
+    doc.text(sanitize(dto.amountWords), { continued: true, lineBreak: false });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    doc.text(sanitize(' ('), { continued: true });
+    doc.text(sanitize(' ('), { continued: true, lineBreak: false });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(amountNumberFormatted, { continued: true });
+    doc.text(amountNumberFormatted, { continued: true, lineBreak: false });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    doc.text(sanitize('), los que recibe directamente su propietario.'), { align: 'justify' });
+    doc.text(sanitize('), los que recibe directamente su propietario.'), { align: 'justify', lineBreak: false });
 
     doc.moveDown(2);
 
