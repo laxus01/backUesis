@@ -106,17 +106,38 @@ export class DocumentsService {
     const entryDate = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'N/D';
     const ownerName = owner.name ?? 'N/D';
     const ownerIdentification = owner.identification ?? 'N/D';
-    doc
-      .fontSize(12)
-      .text(
-        sanitize(`El señor (a) ${ownerName}, identificado con la cédula de ciudadanía No. ${ownerIdentification}, `) +
-          sanitize(`tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante.`),
-        { align: 'justify' },
-      );
+    // Owner paragraph with owner's name in bold
+    doc.fontSize(12);
+    doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify' });
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text(sanitize(ownerName), { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(
+      sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante,`),
+      { align: 'justify' },
+    );
+
+    // Immediately continue with income sentence after the previous phrase
+    const amountNumberFormatted = new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      maximumFractionDigits: 0,
+    }).format(dto.amountNumber);
+    // Income sentence with amount words and number in bold
+    doc.fontSize(12);
+    doc.text(sanitize('el cual genera unos Ingresos Mensuales de '), { continued: true, align: 'justify' });
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text(sanitize(dto.amountWords), { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(sanitize(' ('), { continued: true });
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text(amountNumberFormatted, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(sanitize('), los que recibe directamente su propietario.'), { align: 'justify' });
 
     doc.moveDown(2);
 
-    const dataPairs: [string, string | undefined | null][] = [
+    const dataPairsRaw: [string, string | undefined | null][] = [
       ['NI:', vehicle.internalNumber ?? undefined],
       ['FECHA DE INGRESO:', entryDate],
       ['PLACA:', vehicle.plate],
@@ -132,35 +153,27 @@ export class DocumentsService {
       ['TELEFONO:', owner.phone],
     ];
 
-    const vehicleData: [string, string][] = dataPairs
-      .filter(([, v]) => v && String(v).trim().length > 0)
-      .map(([k, v]) => [k, String(v)]);
+    const vehicleData: [string, string][] = dataPairsRaw
+      .map(([k, v]) => {
+        const hasValue = v !== undefined && v !== null && String(v).trim().length > 0;
+        return [k, hasValue ? String(v) : 'SIN REGISTRAR'];
+      });
 
     vehicleData.forEach(([label, value]) => {
       doc.font('Helvetica-Bold').text(label, { continued: true });
       doc.font('Helvetica').text(` ${value}`);
     });
 
-    // Income sentence
-    doc.moveDown(1);
-    const amountNumberFormatted = new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      maximumFractionDigits: 0,
-    }).format(dto.amountNumber);
-    doc
-      .fontSize(12)
-      .text(
-        sanitize(`El cual genera unos Ingresos Mensuales de ${dto.amountWords} (${amountNumberFormatted}), los que recibe directamente su propietario.`),
-        { align: 'justify' },
-      );
-
     doc.moveDown(2);
 
     // Footer with signature
+    const now = new Date();
+    const day = now.getDate();
+    const monthName = now.toLocaleDateString('es-CO', { month: 'long' });
+    const year = now.getFullYear();
     doc
       .fontSize(12)
-      .text(sanitize('Para constancia se firma en Sincelejo a los 18 días del mes de febrero de 2021'), {
+      .text(sanitize(`Para constancia se firma en Sincelejo a los ${day} días del mes de ${monthName} de ${year}`), {
         align: 'justify',
       });
 
