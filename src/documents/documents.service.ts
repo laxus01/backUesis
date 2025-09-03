@@ -103,7 +103,8 @@ export class DocumentsService {
 
     doc.moveDown();
 
-    const entryDate = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'N/D';
+    const entryDateText = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : 'N/D';
+    const entryDateField = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO') : undefined;
     const ownerName = owner.name ?? 'N/D';
     const ownerIdentification = owner.identification ?? 'N/D';
     // Owner paragraph with owner's name in bold
@@ -113,7 +114,7 @@ export class DocumentsService {
     doc.text(sanitize(ownerName), { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     doc.text(
-      sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante,`),
+      sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDateText}, cuyas características se detallan más adelante,`),
       { align: 'justify', continued: true },
     );
 
@@ -139,7 +140,7 @@ export class DocumentsService {
 
     const dataPairsRaw: [string, string | undefined | null][] = [
       ['NI:', vehicle.internalNumber ?? undefined],
-      ['FECHA DE INGRESO:', entryDate],
+      ['FECHA DE INGRESO:', entryDateField],
       ['PLACA:', vehicle.plate],
       ['MARCA:', (vehicle as any).make?.name],
       ['LINEA:', vehicle.line],
