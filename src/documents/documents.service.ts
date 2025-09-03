@@ -114,7 +114,7 @@ export class DocumentsService {
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     doc.text(
       sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante,`),
-      { align: 'justify', lineBreak: false },
+      { align: 'justify', continued: true },
     );
 
     // Immediately continue with income sentence after the previous phrase
