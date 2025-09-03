@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { OwnerService } from './owner.service';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
@@ -7,7 +7,10 @@ import { UpdateOwnerDto } from './dto/update-owner.dto';
 export class OwnerController {
   constructor(private readonly service: OwnerService) {}
 
-  @Get() findAll() { return this.service.findAll(); }
+  @Get()
+  findAll(@Query('name') name?: string, @Query('identification') identification?: string) {
+    return this.service.findAll(name, identification);
+  }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }
   @Post() create(@Body() data: CreateOwnerDto) { return this.service.create(data); }
   @Post('bulk')

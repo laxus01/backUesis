@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { Owner } from './entities/owner.entity';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
@@ -11,7 +11,12 @@ export class OwnerService {
     @InjectRepository(Owner) private repo: Repository<Owner>,
   ) {}
 
-  findAll() { return this.repo.find(); }
+  findAll(name?: string, identification?: string) {
+    const where: any = {};
+    if (name) where.name = Like(`%${name}%`);
+    if (identification) where.identification = Like(`%${identification}%`);
+    return this.repo.find({ where });
+  }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }
 
   async create(data: CreateOwnerDto) {
@@ -41,7 +46,14 @@ export class OwnerService {
     const existing = await this.findOne(id);
     if (!existing) throw new HttpException('Owner not found', HttpStatus.NOT_FOUND);
     Object.assign(existing, data);
-    return this.repo.save(existing);
+    try {
+      return await this.repo.save(existing);
+    } catch (e: any) {
+      if (e?.code === 'ER_DUP_ENTRY') {
+        throw new HttpException('Identification already in use', HttpStatus.CONFLICT);
+      }
+      throw new HttpException('Error updating owner', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async remove(id: number) {
