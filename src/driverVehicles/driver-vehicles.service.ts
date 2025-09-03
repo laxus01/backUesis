@@ -74,7 +74,7 @@ export class DriverVehiclesService {
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
     return this.repo.findOne({
       where,
-      relations: ['driver', 'driver.eps', 'driver.arl', 'vehicle', 'vehicle.make', 'vehicle.insurer', 'vehicle.communicationCompany', 'vehicle.company'],
+      relations: ['driver', 'driver.eps', 'driver.arl', 'vehicle', 'vehicle.make', 'vehicle.insurer', 'vehicle.communicationCompany', 'vehicle.company', 'vehicle.owner'],
     });
   }
 
