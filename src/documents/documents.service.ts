@@ -108,13 +108,13 @@ export class DocumentsService {
     const ownerIdentification = owner.identification ?? 'N/D';
     // Owner paragraph with owner's name in bold
     doc.fontSize(12);
-    doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify', lineBreak: false });
+    doc.text(sanitize('El señor (a) '), { continued: true, align: 'justify' });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(ownerName), { continued: true, lineBreak: false });
+    doc.text(sanitize(ownerName), { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     doc.text(
       sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDate}, cuyas características se detallan más adelante,`),
-      { continued: true, align: 'justify', lineBreak: false },
+      { align: 'justify' },
     );
 
     // Immediately continue with income sentence after the previous phrase
@@ -125,15 +125,15 @@ export class DocumentsService {
     }).format(dto.amountNumber);
     // Income sentence with amount words and number in bold
     doc.fontSize(12);
-    doc.text(sanitize('el cual genera unos Ingresos Mensuales de '), { continued: true, align: 'justify', lineBreak: false });
+    doc.text(sanitize('el cual genera unos Ingresos Mensuales de '), { continued: true, align: 'justify' });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(dto.amountWords), { continued: true, lineBreak: false });
+    doc.text(sanitize(dto.amountWords), { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    doc.text(sanitize(' ('), { continued: true, lineBreak: false });
+    doc.text(sanitize(' ('), { continued: true });
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(amountNumberFormatted, { continued: true, lineBreak: false });
+    doc.text(amountNumberFormatted, { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    doc.text(sanitize('), los que recibe directamente su propietario.'), { align: 'justify', lineBreak: false });
+    doc.text(sanitize('), los que recibe directamente su propietario.'), { align: 'justify' });
 
     doc.moveDown(2);
 
@@ -179,10 +179,22 @@ export class DocumentsService {
 
     doc.moveDown(4);
 
+    // Signature block in bold
+    if (existsSync(unicodeBoldFont)) {
+      doc.font(unicodeBoldFont);
+    } else {
+      doc.font('Helvetica-Bold');
+    }
     doc.text('_____________________________');
     doc.text('CALIXTO E. TUÑON MARTINEZ');
     doc.text('Gerente');
     doc.text('Cel- 302-4129946');
+    // Restore normal font after signature block
+    if (existsSync(unicodeFont)) {
+      doc.font(unicodeFont);
+    } else {
+      doc.font('Helvetica');
+    }
 
     // End document
     doc.end();
