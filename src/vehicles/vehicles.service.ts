@@ -29,6 +29,13 @@ export class VehiclesService {
     });
   }
 
+  async findByOwnerId(ownerId: number) {
+    return this.vehiclesRepository.findOne({
+      where: { owner: { id: ownerId } as any },
+      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+    });
+  }
+
   async create(data: CreateVehicleDto) {
     try {
       const entity = this.vehiclesRepository.create({

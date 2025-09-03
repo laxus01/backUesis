@@ -17,6 +17,7 @@ import { CompanyModule } from './company/company.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DriverVehiclesModule } from './driverVehicles/driver-vehicles.module';
 import { AdministrationModule } from './administration/administration.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { AdministrationModule } from './administration/administration.module';
     UploadsModule,
     DriverVehiclesModule,
     AdministrationModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
