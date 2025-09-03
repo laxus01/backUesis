@@ -114,7 +114,7 @@ export class DocumentsService {
     doc.text(sanitize(ownerName), { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     doc.text(
-      sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDateText}, cuyas características se detallan más adelante,`),
+      sanitize(`, identificado con la cédula de ciudadanía No. ${ownerIdentification}, tiene afiliado a esta empresa un vehículo de su propiedad desde el ${entryDateText}, cuyas características se detallan más adelante, `),
       { align: 'justify', continued: true },
     );
 
