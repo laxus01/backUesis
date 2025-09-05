@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Raw, Repository } from 'typeorm';
+import * as ExcelJS from 'exceljs';
 import { Driver } from './entities/driver.entity';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -117,6 +118,197 @@ export class DriversService {
       epsId: eps?.id ?? null,
       arlId: arl?.id ?? null,
     };
+  }
+
+  async generateExcelReport(): Promise<Buffer> {
+    // Obtener todos los conductores con sus relaciones
+    const drivers = await this.getDriversForExport();
+
+    // Crear un nuevo libro de trabajo
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Conductores');
+
+    // Configurar las columnas
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Identificación', key: 'identification', width: 15 },
+      { header: 'Expedida en', key: 'issuedIn', width: 20 },
+      { header: 'Nombres', key: 'firstName', width: 20 },
+      { header: 'Apellidos', key: 'lastName', width: 20 },
+      { header: 'Teléfono', key: 'phone', width: 15 },
+      { header: 'Dirección', key: 'address', width: 30 },
+      { header: 'Licencia', key: 'license', width: 15 },
+      { header: 'Categoría', key: 'category', width: 12 },
+      { header: 'Vence', key: 'expiresOn', width: 15 },
+      { header: 'Tipo de Sangre', key: 'bloodType', width: 15 },
+      { header: 'EPS', key: 'eps', width: 25 },
+      { header: 'ARL', key: 'arl', width: 25 },
+    ];
+
+    // Estilizar el encabezado
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '366092' },
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Agregar los datos
+    drivers.forEach((driver, index) => {
+      const row = worksheet.addRow({
+        id: driver.id,
+        identification: driver.identification,
+        issuedIn: driver.issuedIn,
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        phone: driver.phone,
+        address: driver.address,
+        license: driver.license,
+        category: driver.category,
+        expiresOn: driver.expiresOn,
+        bloodType: driver.bloodType,
+        eps: driver.eps?.name || 'N/A',
+        arl: driver.arl?.name || 'N/A',
+      });
+
+      // Alternar colores de fila para mejor legibilidad
+      if (index % 2 === 0) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'F8F9FA' },
+        };
+      }
+    });
+
+    // Agregar bordes a todas las celdas
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    });
+
+    // Agregar información adicional al final
+    const lastRow = worksheet.lastRow.number + 2;
+    worksheet.getCell(`A${lastRow}`).value = `Total de conductores: ${drivers.length}`;
+    worksheet.getCell(`A${lastRow}`).font = { bold: true };
+    
+    const dateRow = lastRow + 1;
+    worksheet.getCell(`A${dateRow}`).value = `Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`;
+    worksheet.getCell(`A${dateRow}`).font = { italic: true };
+
+    // Generar el buffer del archivo Excel
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
+  }
+
+  async generateExcelReportByIds(driverIds: number[]): Promise<Buffer> {
+    // Obtener conductores específicos por IDs
+    const drivers = await this.repo.find({
+      where: driverIds.map(id => ({ id })),
+      relations: ['eps', 'arl'],
+      order: { id: 'ASC' },
+    });
+
+    return this.generateExcelFromDrivers(drivers);
+  }
+
+  private async getDriversForExport() {
+    return this.repo.find({
+      relations: ['eps', 'arl'],
+      order: { id: 'ASC' },
+    });
+  }
+
+  private async generateExcelFromDrivers(drivers: Driver[]): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Conductores');
+
+    // Configurar las columnas
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Identificación', key: 'identification', width: 15 },
+      { header: 'Expedida en', key: 'issuedIn', width: 20 },
+      { header: 'Nombres', key: 'firstName', width: 20 },
+      { header: 'Apellidos', key: 'lastName', width: 20 },
+      { header: 'Teléfono', key: 'phone', width: 15 },
+      { header: 'Dirección', key: 'address', width: 30 },
+      { header: 'Licencia', key: 'license', width: 15 },
+      { header: 'Categoría', key: 'category', width: 12 },
+      { header: 'Vence', key: 'expiresOn', width: 15 },
+      { header: 'Tipo de Sangre', key: 'bloodType', width: 15 },
+      { header: 'EPS', key: 'eps', width: 25 },
+      { header: 'ARL', key: 'arl', width: 25 },
+    ];
+
+    // Estilizar el encabezado
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '366092' },
+    };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    // Agregar los datos
+    drivers.forEach((driver, index) => {
+      const row = worksheet.addRow({
+        id: driver.id,
+        identification: driver.identification,
+        issuedIn: driver.issuedIn,
+        firstName: driver.firstName,
+        lastName: driver.lastName,
+        phone: driver.phone,
+        address: driver.address,
+        license: driver.license,
+        category: driver.category,
+        expiresOn: driver.expiresOn,
+        bloodType: driver.bloodType,
+        eps: driver.eps?.name || 'N/A',
+        arl: driver.arl?.name || 'N/A',
+      });
+
+      // Alternar colores de fila
+      if (index % 2 === 0) {
+        row.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'F8F9FA' },
+        };
+      }
+    });
+
+    // Agregar bordes
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    });
+
+    // Información adicional
+    const lastRow = worksheet.lastRow.number + 2;
+    worksheet.getCell(`A${lastRow}`).value = `Total de conductores: ${drivers.length}`;
+    worksheet.getCell(`A${lastRow}`).font = { bold: true };
+    
+    const dateRow = lastRow + 1;
+    worksheet.getCell(`A${dateRow}`).value = `Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`;
+    worksheet.getCell(`A${dateRow}`).font = { italic: true };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer);
   }
 
   private _handleError(error: any) {

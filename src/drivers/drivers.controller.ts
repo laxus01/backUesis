@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { CreateManyDriversPipe } from './pipes/create-many-drivers.pipe';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
+import { ExportDriversByIdsDto } from './dto/export-drivers.dto';
 
 @Controller('drivers')
 export class DriversController {
@@ -26,4 +28,34 @@ export class DriversController {
   }
   @Put(':id') update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateDriverDto) { return this.service.update(id, data); }
   @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) { return this.service.remove(id); }
+
+  @Get('export/excel')
+  async exportToExcel(@Res() res: Response) {
+    const buffer = await this.service.generateExcelReport();
+    
+    const filename = `conductores_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.send(buffer);
+  }
+
+  @Post('export/excel/by-ids')
+  async exportToExcelByIds(@Body() body: ExportDriversByIdsDto, @Res() res: Response) {
+    const buffer = await this.service.generateExcelReportByIds(body.driverIds);
+    
+    const filename = `conductores_seleccionados_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.send(buffer);
+  }
 }
