@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Raw, Repository } from 'typeorm';
 import { Owner } from './entities/owner.entity';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
@@ -11,10 +11,14 @@ export class OwnerService {
     @InjectRepository(Owner) private repo: Repository<Owner>,
   ) { }
 
-  findAll(name?: string, identification?: string) {
+  findAll(name?: string, identification?: number) {
     const where: any = {};
-    if (name) where.name = Like(`%${name}%`);
-    if (identification) where.identification = Like(`%${identification}%`);
+    if (name) {
+      where.name = Like(`%${name}%`);
+    }
+    if (typeof identification === 'number' && !isNaN(identification)) {
+      where.identification = Like(`${identification}%`);
+    }
     return this.repo.find({ where });
   }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }

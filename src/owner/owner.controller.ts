@@ -9,7 +9,14 @@ export class OwnerController {
 
   @Get()
   findAll(@Query('name') name?: string, @Query('identification') identification?: string) {
-    return this.service.findAll(name, identification);
+    let identificationNumber: number | undefined;
+    if (identification) {
+      identificationNumber = parseInt(identification, 10);
+      if (isNaN(identificationNumber)) {
+        throw new BadRequestException('Identification must be a valid number.');
+      }
+    }
+    return this.service.findAll(name, identificationNumber);
   }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }
   @Post() create(@Body() data: CreateOwnerDto) { return this.service.create(data); }

@@ -1,10 +1,12 @@
 import { IsDateString, IsInt, IsOptional, IsPositive, IsString, IsUrl, Length } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateDriverDto {
   @IsOptional()
-  @IsString()
-  @Length(1, 30)
-  identification?: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  identification?: number;
 
   @IsOptional()
   @IsString()
@@ -32,9 +34,10 @@ export class UpdateDriverDto {
   address?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(1, 60)
-  license?: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  license?: number;
 
   @IsOptional()
   @IsString()

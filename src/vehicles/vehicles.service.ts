@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
 import { Vehicle } from './entities/vehicle.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { QueryVehicleDto } from './dto/query-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 
 @Injectable()
@@ -11,13 +12,16 @@ export class VehiclesService {
     @InjectRepository(Vehicle) private vehiclesRepository: Repository<Vehicle>,
   ) {}
 
-  async findAll(plate?: string, companyId?: number) {
-    const where = plate
-      ? { plate: Like(`%${plate}%`) }
-      : {};
-    const companyWhere = companyId ? { company: { id: companyId } as any } : {};
+  async findAll({ plate, companyId }: QueryVehicleDto) {
+    const where: any = {};
+    if (plate) {
+      where.plate = Like(`%${plate}%`);
+    }
+    if (companyId) {
+      where.company = { id: companyId };
+    }
     return this.vehiclesRepository.find({
-      where: { ...where, ...companyWhere },
+      where,
       relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
     });
   }
@@ -92,9 +96,9 @@ export class VehiclesService {
     if (data.line !== undefined) entity.line = data.line;
     if (data.entryDate !== undefined) entity.entryDate = data.entryDate;
     if (data.makeId !== undefined) entity.make = { id: data.makeId } as any;
-    if (data.insurerId !== undefined) entity.insurer = data.insurerId ? { id: data.insurerId } as any : null;
-    if (data.communicationCompanyId !== undefined) entity.communicationCompany = data.communicationCompanyId ? { id: data.communicationCompanyId } as any : null;
-    if (data.ownerId !== undefined) entity.owner = data.ownerId ? { id: data.ownerId } as any : null;
+    if (data.insurerId !== undefined) entity.insurer = data.insurerId > 0 ? { id: data.insurerId } as any : null;
+    if (data.communicationCompanyId !== undefined) entity.communicationCompany = data.communicationCompanyId > 0 ? { id: data.communicationCompanyId } as any : null;
+    if (data.ownerId !== undefined) entity.owner = data.ownerId > 0 ? { id: data.ownerId } as any : null;
     if (data.companyId !== undefined) entity.company = { id: data.companyId } as any;
     return entity;
   }

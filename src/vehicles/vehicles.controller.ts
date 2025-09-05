@@ -1,19 +1,17 @@
-import { Body, Controller, DefaultValuePipe, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { CreateManyVehiclesPipe } from './pipes/create-many-vehicles.pipe';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { QueryVehicleDto } from './dto/query-vehicle.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) { }
 
   @Get()
-  async findAll(
-    @Query('plate') plate?: string,
-    @Query('companyId', new ParseIntPipe({ optional: true })) companyId?: number,
-  ) {
-    return this.vehiclesService.findAll(plate, companyId);
+  async findAll(@Query() query: QueryVehicleDto) {
+    return this.vehiclesService.findAll(query);
   }
 
   @Get(':id')

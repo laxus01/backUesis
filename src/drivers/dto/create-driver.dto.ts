@@ -1,10 +1,11 @@
-import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, IsUrl, Length } from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsPositive, IsString, IsUrl, Length } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateDriverDto {
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 30)
-  identification: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  identification: number;
 
   @IsString()
   @Length(1, 120)
@@ -28,9 +29,10 @@ export class CreateDriverDto {
   @Length(1, 200)
   address: string;
 
-  @IsString()
-  @Length(1, 60)
-  license: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  license: number;
 
   @IsString()
   @Length(1, 10)

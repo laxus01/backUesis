@@ -6,6 +6,7 @@ import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { VehiclesService } from '../vehicles/vehicles.service';
 import { DateRangeDto } from './dto/date-range.dto';
 import { VehicleIdDto } from './dto/vehicle-id.dto';
+import { OwnerIdDto } from './dto/owner-id.dto';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -53,6 +54,15 @@ export class AdministrationService {
     return this.adminRepo.find({
       where: { vehicle: { id: vehicleId } },
       relations: { vehicle: true, user: true },
+      order: { date: 'DESC', id: 'DESC' },
+    });
+  }
+
+  async findByOwnerId(dto: OwnerIdDto): Promise<Administration[]> {
+    const { ownerId } = dto;
+    return this.adminRepo.find({
+      where: { vehicle: { owner: { id: ownerId } } },
+      relations: { vehicle: { owner: true }, user: true },
       order: { date: 'DESC', id: 'DESC' },
     });
   }

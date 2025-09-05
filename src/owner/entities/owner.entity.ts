@@ -9,8 +9,8 @@ export class Owner {
   @Column({ length: 120 })
   name: string;
 
-  @Column({ length: 30 })
-  identification: string;
+  @Column({ type: 'bigint' })
+  identification: number;
 
   @Column({ length: 120, nullable: true })
   email?: string;

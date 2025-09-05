@@ -4,6 +4,7 @@ import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { DateRangeDto } from './dto/date-range.dto';
 import { VehicleIdDto } from './dto/vehicle-id.dto';
+import { OwnerIdDto } from './dto/owner-id.dto';
 
 @Controller('administrations')
 export class AdministrationController {
@@ -37,6 +38,11 @@ export class AdministrationController {
   @Post('vehicle')
   async findByVehicle(@Body() dto: VehicleIdDto) {
     return this.service.findByVehicleId(dto);
+  }
+
+  @Post('owner')
+  async findByOwner(@Body() dto: OwnerIdDto) {
+    return this.service.findByOwnerId(dto);
   }
 
   @Delete(':id')

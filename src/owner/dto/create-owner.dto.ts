@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Length } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateOwnerDto {
   @IsString()
@@ -6,10 +7,10 @@ export class CreateOwnerDto {
   @Length(1, 120)
   name: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @Length(1, 30)
-  identification: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  identification: number;
 
   @IsOptional()
   @IsEmail()

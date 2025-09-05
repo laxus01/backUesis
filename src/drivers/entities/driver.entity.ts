@@ -8,8 +8,8 @@ export class Driver {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 30 })
-  identification: string;
+  @Column({ type: 'bigint' })
+  identification: number;
 
   @Column({ name: 'issued_in', length: 120, nullable: false })
   issuedIn: string; // "De" (lugar de expedición)
@@ -26,8 +26,8 @@ export class Driver {
   @Column({ length: 200, nullable: false })
   address: string; // Dirección
 
-  @Column({ length: 60, nullable: false })
-  license: string; // Licencia
+  @Column({ type: 'bigint' })
+  license: number; // Licencia
 
   @Column({ length: 10, nullable: false })
   category: string; // Categoría

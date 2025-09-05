@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Like, Raw, Repository } from 'typeorm';
 import { Driver } from './entities/driver.entity';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
@@ -24,7 +24,18 @@ export class DriversService {
   }
 
   async searchByIdentification(q: string) {
-    const drivers = await this.repo.find({ where: { identification: Like(`${q}%`) }, take: 20, relations: ['eps', 'arl'] });
+    const sanitizedQ = q.replace(/\D/g, '');
+
+    if (!sanitizedQ) {
+      return [];
+    }
+
+    const drivers = await this.repo.find({
+      where: { identification: Raw(alias => `${alias} LIKE :q`, { q: `${sanitizedQ}%` }) },
+      take: 20,
+      relations: ['eps', 'arl'],
+    });
+
     return drivers.map(driver => this._transformDriver(driver));
   }
 

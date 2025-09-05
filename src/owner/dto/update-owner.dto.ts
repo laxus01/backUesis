@@ -1,4 +1,5 @@
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsPositive, IsString, Length } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateOwnerDto {
   @IsOptional()
@@ -7,9 +8,10 @@ export class UpdateOwnerDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  @Length(1, 30)
-  identification?: string;
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  identification?: number;
 
   @IsOptional()
   @IsEmail()

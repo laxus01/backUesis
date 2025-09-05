@@ -11,7 +11,7 @@ async function bootstrap() {
   // Increase request body limits for large bulk payloads
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
-  app.useGlobalPipes(new ValidationPipe()); 
+  app.useGlobalPipes(new ValidationPipe({ transform: true })); 
   // Ensure uploads directory exists and serve it statically
   const uploadsDir = join(process.cwd(), 'uploads');
   if (!existsSync(uploadsDir)) {
