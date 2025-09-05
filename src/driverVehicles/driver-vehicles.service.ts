@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DriverVehicle } from './driver-vehicle.entity';
+import { DriverVehicle } from './entities/driver-vehicle.entity';
 import { CreateDriverVehicleDto } from './dto/create-driver-vehicle.dto';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
 

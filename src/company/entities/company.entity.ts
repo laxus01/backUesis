@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, Unique, CreateDateColumn } from 'typeorm';
 
 @Entity('companies')
 @Unique(['nit'])
@@ -17,4 +17,7 @@ export class Company {
 
   @Column({ length: 200, nullable: true })
   address?: string;
+  
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

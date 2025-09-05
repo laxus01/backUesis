@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
 import { Company } from "../../company/entities/company.entity";
 
 @Entity({ name: 'users' })
@@ -22,4 +22,7 @@ export class User {
     @ManyToOne(() => Company, { eager: false, nullable: true })
     @JoinColumn({ name: 'company_id' })
     company?: Company;
+    
+    @CreateDateColumn({ name: 'created_at' })
+    createdAt: Date;
 }

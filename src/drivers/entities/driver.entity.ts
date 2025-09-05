@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 import { Eps } from '../../eps/entities/eps.entity';
 import { Arl } from '../../arl/entities/arl.entity';
 
@@ -48,4 +48,7 @@ export class Driver {
   @ManyToOne(() => Arl, { eager: false, nullable: false })
   @JoinColumn({ name: 'arl_id' })
   arl: Arl; // ARL
+  
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

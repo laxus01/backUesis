@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 @Entity('owners')
 @Unique(['identification'])
@@ -20,4 +20,7 @@ export class Owner {
 
   @Column({ length: 20 })
   phone: string;
+  
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

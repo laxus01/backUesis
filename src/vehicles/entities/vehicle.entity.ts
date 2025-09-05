@@ -1,4 +1,4 @@
-  import { Column, Entity, PrimaryGeneratedColumn, Unique, ManyToOne, JoinColumn } from 'typeorm';
+  import { Column, Entity, PrimaryGeneratedColumn, Unique, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
  import { Make } from '../../make/entities/make.entity';
  import { Insurer } from '../../insurer/entities/insurer.entity';
  import { CommunicationCompany } from '../../communicationCompany/entities/communication-company.entity';
@@ -56,4 +56,6 @@ export class Vehicle {
   @Column({ type: 'date', name: 'entry_date', nullable: true })
   entryDate?: string; // Fecha de ingreso
 
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Unique, Column } from 'typeorm';
-import { Driver } from '../drivers/entities/driver.entity';
-import { Vehicle } from '../vehicles/entities/vehicle.entity';
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Unique, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Driver } from '../../drivers/entities/driver.entity';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 
 @Entity('drivers_vehicles')
 @Unique(['driver', 'vehicle'])
@@ -43,4 +43,10 @@ export class DriverVehicle {
 
   @Column({ type: 'date', nullable: true, name: 'technical_mechanic_expires_on' })
   technicalMechanicExpires?: string;
+  
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }
