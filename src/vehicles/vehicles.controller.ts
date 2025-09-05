@@ -1,13 +1,17 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { CreateManyVehiclesPipe } from './pipes/create-many-vehicles.pipe';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { QueryVehicleDto } from './dto/query-vehicle.dto';
+import { ExportVehiclesByIdsDto } from './dto/export-vehicles.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
-  constructor(private readonly vehiclesService: VehiclesService) { }
+  constructor(
+    private readonly vehiclesService: VehiclesService,
+  ) { }
 
   @Get()
   async findAll(@Query() query: QueryVehicleDto) {
@@ -37,5 +41,35 @@ export class VehiclesController {
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.vehiclesService.remove(id);
+  }
+
+  @Get('export/excel')
+  async exportToExcel(@Query() query: QueryVehicleDto, @Res() res: Response) {
+    const buffer = await this.vehiclesService.generateExcelReport(query);
+    
+    const filename = `vehiculos_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.send(buffer);
+  }
+
+  @Post('export/excel/by-ids')
+  async exportToExcelByIds(@Body() body: ExportVehiclesByIdsDto, @Res() res: Response) {
+    const buffer = await this.vehiclesService.generateExcelReportByIds(body.vehicleIds);
+    
+    const filename = `vehiculos_seleccionados_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.send(buffer);
   }
 }
