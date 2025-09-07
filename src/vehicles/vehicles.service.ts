@@ -13,7 +13,7 @@ export class VehiclesService {
     @InjectRepository(Vehicle) private vehiclesRepository: Repository<Vehicle>,
   ) {}
 
-  async findAll({ plate, companyId }: QueryVehicleDto) {
+  async findAll({ plate }: QueryVehicleDto, companyId?: number) {
     const where: any = {};
     if (plate) {
       where.plate = Like(`%${plate}%`);
@@ -24,6 +24,7 @@ export class VehiclesService {
     return this.vehiclesRepository.find({
       where,
       relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      order: { createdAt: 'DESC' }
     });
   }
 
@@ -119,9 +120,9 @@ export class VehiclesService {
     return this.vehiclesRepository.remove(existing);
   }
 
-  async generateExcelReport(queryParams: QueryVehicleDto = {}): Promise<Buffer> {
+  async generateExcelReport(queryParams: QueryVehicleDto = {}, companyId?: string): Promise<Buffer> {
     // Obtener los vehículos con las mismas condiciones que findAll
-    const vehicles = await this.getVehiclesForExport(queryParams);
+    const vehicles = await this.getVehiclesForExport(queryParams, companyId ? parseInt(companyId) : undefined);
 
     // Crear un nuevo libro de trabajo
     const workbook = new ExcelJS.Workbook();
@@ -221,15 +222,15 @@ export class VehiclesService {
     return this.generateExcelFromVehicles(vehicles);
   }
 
-  private async getVehiclesForExport(queryParams: QueryVehicleDto) {
+  private async getVehiclesForExport(queryParams: QueryVehicleDto, companyId?: number) {
     const where: any = {};
     
     if (queryParams.plate) {
       where.plate = Like(`%${queryParams.plate}%`);
     }
     
-    if (queryParams.companyId) {
-      where.company = { id: queryParams.companyId };
+    if (companyId) {
+      where.company = { id: companyId };
     }
 
     return this.vehiclesRepository.find({

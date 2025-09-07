@@ -16,6 +16,7 @@ import { DriversModule } from './drivers/drivers.module';
 import { CompanyModule } from './company/company.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DriverVehiclesModule } from './driverVehicles/driver-vehicles.module';
+import { DriverVehiclesHistoryModule } from './driverVehiclesHistory/driver-vehicles-history.module';
 import { AdministrationModule } from './administration/administration.module';
 import { DocumentsModule } from './documents/documents.module';
 
@@ -49,6 +50,7 @@ import { DocumentsModule } from './documents/documents.module';
     CompanyModule,
     UploadsModule,
     DriverVehiclesModule,
+    DriverVehiclesHistoryModule,
     AdministrationModule,
     DocumentsModule,
   ],

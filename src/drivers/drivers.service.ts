@@ -5,11 +5,13 @@ import * as ExcelJS from 'exceljs';
 import { Driver } from './entities/driver.entity';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
+import { DriverVehicle } from '../driverVehicles/entities/driver-vehicle.entity';
 
 @Injectable()
 export class DriversService {
   constructor(
     @InjectRepository(Driver) private repo: Repository<Driver>,
+    @InjectRepository(DriverVehicle) private driverVehicleRepo: Repository<DriverVehicle>,
   ) { }
 
   async findAll() {
@@ -87,12 +89,46 @@ export class DriversService {
   }
 
   async remove(id: number) {
-    // findOne will throw NOT_FOUND if it doesn't exist
+    // 1. Verificar si existe un registro en la tabla drivers con el id enviado por parámetro
     const driver = await this.repo.findOne({ where: { id } });
     if (!driver) {
-        throw new HttpException('Driver not found', HttpStatus.NOT_FOUND);
+      throw new HttpException({
+        message: 'Conductor no encontrado',
+        error: 'DRIVER_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        driverId: id
+      }, HttpStatus.NOT_FOUND);
     }
-    return this.repo.remove(driver);
+
+    // 2. Verificar si existe un registro en la tabla drivers_vehicles con driver_id igual al valor de la URL
+    const existingDriverVehicle = await this.driverVehicleRepo.findOne({
+      where: { driver: { id } }
+    });
+
+    // 3. Si existen registros con driver_id, retornar error
+    if (existingDriverVehicle) {
+      throw new HttpException({
+        message: 'No se puede eliminar el conductor porque tiene vehículos asignados',
+        error: 'DRIVER_HAS_ASSIGNED_VEHICLES',
+        statusCode: HttpStatus.CONFLICT,
+        driverId: id,
+        driverName: `${driver.firstName} ${driver.lastName}`,
+        driverIdentification: driver.identification
+      }, HttpStatus.CONFLICT);
+    }
+
+    // 4. Si no hay dependencias, proceder a eliminar el registro
+    await this.repo.remove(driver);
+    
+    return {
+      message: 'Conductor eliminado exitosamente',
+      success: true,
+      deletedDriver: {
+        id: driver.id,
+        name: `${driver.firstName} ${driver.lastName}`,
+        identification: driver.identification
+      }
+    };
   }
 
   private _dtoToEntity(data: CreateDriverDto | UpdateDriverDto): Partial<Driver> {

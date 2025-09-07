@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Post, Put, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { CreateManyVehiclesPipe } from './pipes/create-many-vehicles.pipe';
 import { VehiclesService } from './vehicles.service';
@@ -14,8 +14,8 @@ export class VehiclesController {
   ) { }
 
   @Get()
-  async findAll(@Query() query: QueryVehicleDto) {
-    return this.vehiclesService.findAll(query);
+  async findAll(@Query() query: QueryVehicleDto, @Headers('companyId') companyId: string) {
+    return this.vehiclesService.findAll(query, companyId ? parseInt(companyId) : undefined);
   }
 
   @Get(':id')
@@ -44,8 +44,8 @@ export class VehiclesController {
   }
 
   @Get('export/excel')
-  async exportToExcel(@Query() query: QueryVehicleDto, @Res() res: Response) {
-    const buffer = await this.vehiclesService.generateExcelReport(query);
+  async exportToExcel(@Query() query: QueryVehicleDto, @Headers('companyId') companyId: string, @Res() res: Response) {
+    const buffer = await this.vehiclesService.generateExcelReport(query, companyId);
     
     const filename = `vehiculos_${new Date().toISOString().split('T')[0]}.xlsx`;
     

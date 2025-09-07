@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Raw, Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Owner } from './entities/owner.entity';
+import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { CreateOwnerDto } from './dto/create-owner.dto';
 import { UpdateOwnerDto } from './dto/update-owner.dto';
 
@@ -10,6 +11,7 @@ import { UpdateOwnerDto } from './dto/update-owner.dto';
 export class OwnerService {
   constructor(
     @InjectRepository(Owner) private repo: Repository<Owner>,
+    @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
   ) { }
 
   findAll(name?: string, identification?: number) {
@@ -20,28 +22,85 @@ export class OwnerService {
     if (typeof identification === 'number' && !isNaN(identification)) {
       where.identification = Like(`${identification}%`);
     }
-    return this.repo.find({ where });
+    return this.repo.find({ 
+      where,
+      order: { createdAt: 'DESC' }
+    });
   }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }
 
   async create(data: CreateOwnerDto) {
-    try { return await this.repo.save(this.repo.create(data)); }
-    catch (e: any) {
-      if (e?.code === 'ER_DUP_ENTRY') throw new HttpException('Owner already exists', HttpStatus.CONFLICT);
-      throw new HttpException('Error creating owner', HttpStatus.INTERNAL_SERVER_ERROR);
+    // Verificar si la identificación ya existe
+    const existingOwner = await this.repo.findOne({ 
+      where: { identification: data.identification } 
+    });
+    
+    if (existingOwner) {
+      throw new HttpException({
+        message: 'La identificación ya existe en la base de datos',
+        error: 'IDENTIFICATION_ALREADY_EXISTS',
+        statusCode: HttpStatus.CONFLICT,
+        identification: data.identification
+      }, HttpStatus.CONFLICT);
+    }
+
+    try { 
+      return await this.repo.save(this.repo.create(data)); 
+    } catch (e: any) {
+      if (e?.code === 'ER_DUP_ENTRY') {
+        throw new HttpException({
+          message: 'La identificación ya existe en la base de datos',
+          error: 'IDENTIFICATION_ALREADY_EXISTS',
+          statusCode: HttpStatus.CONFLICT,
+          identification: data.identification
+        }, HttpStatus.CONFLICT);
+      }
+      throw new HttpException({
+        message: 'Error interno al crear el propietario',
+        error: 'INTERNAL_SERVER_ERROR',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR
+      }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async createMany(dtos: CreateOwnerDto[]) {
     const created: Owner[] = [];
-    const failed: Array<{ input: CreateOwnerDto; reason: string }> = [];
+    const failed: Array<{ input: CreateOwnerDto; reason: string; error?: string; identification?: number }> = [];
+    
     for (const data of dtos) {
       try {
+        // Verificar si la identificación ya existe
+        const existingOwner = await this.repo.findOne({ 
+          where: { identification: data.identification } 
+        });
+        
+        if (existingOwner) {
+          failed.push({ 
+            input: data, 
+            reason: 'La identificación ya existe en la base de datos',
+            error: 'IDENTIFICATION_ALREADY_EXISTS',
+            identification: data.identification
+          });
+          continue;
+        }
+
         const saved = await this.repo.save(this.repo.create(data));
         created.push(saved);
       } catch (e: any) {
-        if (e?.code === 'ER_DUP_ENTRY') failed.push({ input: data, reason: 'Owner already exists' });
-        else failed.push({ input: data, reason: 'Error creating owner' });
+        if (e?.code === 'ER_DUP_ENTRY') {
+          failed.push({ 
+            input: data, 
+            reason: 'La identificación ya existe en la base de datos',
+            error: 'IDENTIFICATION_ALREADY_EXISTS',
+            identification: data.identification
+          });
+        } else {
+          failed.push({ 
+            input: data, 
+            reason: 'Error interno al crear el propietario',
+            error: 'INTERNAL_SERVER_ERROR'
+          });
+        }
       }
     }
     return { created, failed };
@@ -49,21 +108,74 @@ export class OwnerService {
 
   async update(id: number, data: UpdateOwnerDto) {
     const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Owner not found', HttpStatus.NOT_FOUND);
+    if (!existing) {
+      throw new HttpException({
+        message: 'Propietario no encontrado',
+        error: 'OWNER_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Si se está actualizando la identificación, verificar que no exista en otro propietario
+    if (data.identification && Number(data.identification) !== existing.identification) {
+      const ownerWithSameIdentification = await this.repo.findOne({ 
+        where: { identification: Number(data.identification) } 
+      });
+      
+      if (ownerWithSameIdentification && ownerWithSameIdentification.id !== existing.id) {
+        throw new HttpException({
+          message: 'La identificación ya existe en la base de datos',
+          error: 'IDENTIFICATION_ALREADY_EXISTS',
+          statusCode: HttpStatus.CONFLICT,
+          identification: Number(data.identification)
+        }, HttpStatus.CONFLICT);
+      }
+    }
+
     Object.assign(existing, data);
     try {
       return await this.repo.save(existing);
     } catch (e: any) {
       if (e?.code === 'ER_DUP_ENTRY') {
-        throw new HttpException('Identification already in use', HttpStatus.CONFLICT);
+        throw new HttpException({
+          message: 'La identificación ya existe en la base de datos',
+          error: 'IDENTIFICATION_ALREADY_EXISTS',
+          statusCode: HttpStatus.CONFLICT,
+          identification: data.identification
+        }, HttpStatus.CONFLICT);
       }
-      throw new HttpException('Error updating owner', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException({
+        message: 'Error interno al actualizar el propietario',
+        error: 'INTERNAL_SERVER_ERROR',
+        statusCode: HttpStatus.INTERNAL_SERVER_ERROR
+      }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async remove(id: number) {
     const existing = await this.findOne(id);
-    if (!existing) throw new HttpException('Owner not found', HttpStatus.NOT_FOUND);
+    if (!existing) {
+      throw new HttpException({
+        message: 'Propietario no encontrado',
+        error: 'OWNER_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Verificar si el propietario tiene vehículos vinculados
+    const vehiclesCount = await this.vehicleRepo.count({
+      where: { owner: { id: existing.id } }
+    });
+
+    if (vehiclesCount > 0) {
+      throw new HttpException({
+        message: 'No se puede eliminar el propietario porque tiene vehículos relacionados',
+        error: 'OWNER_HAS_RELATED_VEHICLES',
+        statusCode: HttpStatus.CONFLICT,
+        vehiclesCount: vehiclesCount
+      }, HttpStatus.CONFLICT);
+    }
+
     return this.repo.remove(existing);
   }
 
