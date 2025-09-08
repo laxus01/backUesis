@@ -14,7 +14,7 @@ export class OwnerService {
     @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
   ) { }
 
-  findAll(name?: string, identification?: number) {
+  findAll(name?: string, identification?: number, companyId?: number) {
     const where: any = {};
     if (name) {
       where.name = Like(`%${name}%`);
@@ -22,22 +22,29 @@ export class OwnerService {
     if (typeof identification === 'number' && !isNaN(identification)) {
       where.identification = Like(`${identification}%`);
     }
+    if (companyId) {
+      where.company = { id: companyId };
+    }
     return this.repo.find({ 
       where,
+      relations: ['company'],
       order: { createdAt: 'DESC' }
     });
   }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }
 
   async create(data: CreateOwnerDto) {
-    // Verificar si la identificación ya existe
+    // Verificar si la identificación ya existe en la misma compañía
     const existingOwner = await this.repo.findOne({ 
-      where: { identification: data.identification } 
+      where: { 
+        identification: data.identification,
+        company: { id: data.companyId }
+      } 
     });
     
     if (existingOwner) {
       throw new HttpException({
-        message: 'La identificación ya existe en la base de datos',
+        message: 'La identificación ya existe en la base de datos para esta compañía',
         error: 'IDENTIFICATION_ALREADY_EXISTS',
         statusCode: HttpStatus.CONFLICT,
         identification: data.identification
@@ -45,11 +52,15 @@ export class OwnerService {
     }
 
     try { 
-      return await this.repo.save(this.repo.create(data)); 
+      const ownerData = {
+        ...data,
+        company: { id: data.companyId }
+      };
+      return await this.repo.save(this.repo.create(ownerData)); 
     } catch (e: any) {
       if (e?.code === 'ER_DUP_ENTRY') {
         throw new HttpException({
-          message: 'La identificación ya existe en la base de datos',
+          message: 'La identificación ya existe en la base de datos para esta compañía',
           error: 'IDENTIFICATION_ALREADY_EXISTS',
           statusCode: HttpStatus.CONFLICT,
           identification: data.identification
@@ -69,28 +80,35 @@ export class OwnerService {
     
     for (const data of dtos) {
       try {
-        // Verificar si la identificación ya existe
+        // Verificar si la identificación ya existe en la misma compañía
         const existingOwner = await this.repo.findOne({ 
-          where: { identification: data.identification } 
+          where: { 
+            identification: data.identification,
+            company: { id: data.companyId }
+          } 
         });
         
         if (existingOwner) {
           failed.push({ 
             input: data, 
-            reason: 'La identificación ya existe en la base de datos',
+            reason: 'La identificación ya existe en la base de datos para esta compañía',
             error: 'IDENTIFICATION_ALREADY_EXISTS',
             identification: data.identification
           });
           continue;
         }
 
-        const saved = await this.repo.save(this.repo.create(data));
+        const ownerData = {
+          ...data,
+          company: { id: data.companyId }
+        };
+        const saved = await this.repo.save(this.repo.create(ownerData));
         created.push(saved);
       } catch (e: any) {
         if (e?.code === 'ER_DUP_ENTRY') {
           failed.push({ 
             input: data, 
-            reason: 'La identificación ya existe en la base de datos',
+            reason: 'La identificación ya existe en la base de datos para esta compañía',
             error: 'IDENTIFICATION_ALREADY_EXISTS',
             identification: data.identification
           });
@@ -116,15 +134,19 @@ export class OwnerService {
       }, HttpStatus.NOT_FOUND);
     }
 
-    // Si se está actualizando la identificación, verificar que no exista en otro propietario
+    // Si se está actualizando la identificación, verificar que no exista en otro propietario de la misma compañía
     if (data.identification && Number(data.identification) !== existing.identification) {
+      const companyId = data.companyId || existing.company?.id;
       const ownerWithSameIdentification = await this.repo.findOne({ 
-        where: { identification: Number(data.identification) } 
+        where: { 
+          identification: Number(data.identification),
+          company: { id: companyId }
+        } 
       });
       
       if (ownerWithSameIdentification && ownerWithSameIdentification.id !== existing.id) {
         throw new HttpException({
-          message: 'La identificación ya existe en la base de datos',
+          message: 'La identificación ya existe en la base de datos para esta compañía',
           error: 'IDENTIFICATION_ALREADY_EXISTS',
           statusCode: HttpStatus.CONFLICT,
           identification: Number(data.identification)
@@ -132,13 +154,19 @@ export class OwnerService {
       }
     }
 
-    Object.assign(existing, data);
+    // Si se está actualizando la compañía, asignar la relación correctamente
+    if (data.companyId) {
+      Object.assign(existing, { ...data, company: { id: data.companyId } });
+    } else {
+      Object.assign(existing, data);
+    }
+    
     try {
       return await this.repo.save(existing);
     } catch (e: any) {
       if (e?.code === 'ER_DUP_ENTRY') {
         throw new HttpException({
-          message: 'La identificación ya existe en la base de datos',
+          message: 'La identificación ya existe en la base de datos para esta compañía',
           error: 'IDENTIFICATION_ALREADY_EXISTS',
           statusCode: HttpStatus.CONFLICT,
           identification: data.identification
@@ -179,9 +207,9 @@ export class OwnerService {
     return this.repo.remove(existing);
   }
 
-  async generateExcelReport(name?: string, identification?: number): Promise<Buffer> {
+  async generateExcelReport(name?: string, identification?: number, companyId?: number): Promise<Buffer> {
     // Obtener los propietarios con los mismos filtros que findAll
-    const owners = await this.getOwnersForExport(name, identification);
+    const owners = await this.getOwnersForExport(name, identification, companyId);
 
     // Crear un nuevo libro de trabajo
     const workbook = new ExcelJS.Workbook();
@@ -264,7 +292,7 @@ export class OwnerService {
     return this.generateExcelFromOwners(owners);
   }
 
-  private async getOwnersForExport(name?: string, identification?: number) {
+  private async getOwnersForExport(name?: string, identification?: number, companyId?: number) {
     const where: any = {};
     if (name) {
       where.name = Like(`%${name}%`);
@@ -272,8 +300,12 @@ export class OwnerService {
     if (typeof identification === 'number' && !isNaN(identification)) {
       where.identification = Like(`${identification}%`);
     }
+    if (companyId) {
+      where.company = { id: companyId };
+    }
     return this.repo.find({ 
       where,
+      relations: ['company'],
       order: { id: 'ASC' },
     });
   }

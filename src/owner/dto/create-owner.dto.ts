@@ -26,4 +26,10 @@ export class CreateOwnerDto {
   @IsNotEmpty()
   @Length(1, 20)
   phone: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  companyId?: number;
 }

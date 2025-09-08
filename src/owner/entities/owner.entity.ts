@@ -1,4 +1,5 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique, ManyToOne, JoinColumn } from 'typeorm';
+import { Company } from '../../company/entities/company.entity';
 
 @Entity('owners')
 @Unique(['identification'])
@@ -20,6 +21,10 @@ export class Owner {
 
   @Column({ length: 20 })
   phone: string;
+
+  @ManyToOne(() => Company, { eager: false, nullable: false })
+  @JoinColumn({ name: 'company_id' })
+  company: Company; // Empresa a la que pertenece
   
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

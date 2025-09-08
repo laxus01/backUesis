@@ -48,6 +48,11 @@ export class DriverVehiclesService {
     const entity = existing ? this.repo.merge(existing, payload) : this.repo.create(payload);
     try {
       const saved = await this.repo.save(entity);
+      
+      // Guardar automáticamente en el historial después de crear/actualizar
+      const actionType = existing ? 'UPDATE' : 'CREATE';
+      await this.historyService.saveToHistory(saved, actionType);
+      
       return saved;
     } catch (e: any) {
       throw new HttpException('Error saving assignment', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -81,19 +86,33 @@ export class DriverVehiclesService {
     });
   }
 
-  async remove(id: number, companyId?: number) {
+  async remove(id: number, companyId?: number, changedBy?: string) {
     const where: any = { id };
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
-    const existing = await this.repo.findOne({ where });
+    const existing = await this.repo.findOne({ 
+      where,
+      relations: ['driver', 'vehicle', 'vehicle.company']
+    });
     if (!existing) throw new HttpException('Assignment not found', HttpStatus.NOT_FOUND);
+    
+    // Guardar en el historial antes de eliminar
+    await this.historyService.saveToHistory(existing, 'DELETE', changedBy);
+    
     return this.repo.remove(existing);
   }
 
-  async removeBy(driverId: number, vehicleId: number, companyId?: number) {
+  async removeBy(driverId: number, vehicleId: number, companyId?: number, changedBy?: string) {
     const where: any = { driver: { id: driverId } as any, vehicle: { id: vehicleId } as any };
     if (companyId) where.vehicle.company = { id: companyId } as any;
-    const existing = await this.repo.findOne({ where });
+    const existing = await this.repo.findOne({ 
+      where,
+      relations: ['driver', 'vehicle', 'vehicle.company']
+    });
     if (!existing) throw new HttpException('Assignment not found', HttpStatus.NOT_FOUND);
+    
+    // Guardar en el historial antes de eliminar
+    await this.historyService.saveToHistory(existing, 'DELETE', changedBy);
+    
     return this.repo.remove(existing);
   }
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Post, BadRequestException } from '@nestjs/common';
 import { CreateManyAdministrationPipe } from './pipes/create-many-administration.pipe';
 import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
@@ -31,8 +31,15 @@ export class AdministrationController {
   }
 
   @Post('date-range')
-  async findByDateRange(@Body() dto: DateRangeDto) {
-    return this.service.findByDateRange(dto);
+  async findByDateRange(@Body() dto: DateRangeDto, @Headers('companyId') companyId?: string) {
+    let companyIdNumber: number | undefined;
+    if (companyId) {
+      companyIdNumber = parseInt(companyId, 10);
+      if (isNaN(companyIdNumber)) {
+        throw new BadRequestException('CompanyId must be a valid number.');
+      }
+    }
+    return this.service.findByDateRange(dto, companyIdNumber);
   }
 
   @Post('vehicle')

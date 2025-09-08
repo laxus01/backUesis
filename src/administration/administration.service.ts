@@ -40,11 +40,17 @@ export class AdministrationService {
     return this.adminRepo.find({ relations: { vehicle: true } });
   }
 
-  async findByDateRange(dto: DateRangeDto): Promise<Administration[]> {
+  async findByDateRange(dto: DateRangeDto, companyId?: number): Promise<Administration[]> {
     const { startDate, endDate } = dto;
+    const where: any = { date: Between(startDate, endDate) };
+    
+    if (companyId) {
+      where.vehicle = { company: { id: companyId } };
+    }
+    
     return this.adminRepo.find({
-      where: { date: Between(startDate, endDate) },
-      relations: { vehicle: true },
+      where,
+      relations: { vehicle: { company: true } },
       order: { date: 'ASC', id: 'ASC' },
     });
   }
