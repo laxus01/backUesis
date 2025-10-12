@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Post, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, ParseIntPipe, Post, BadRequestException, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { CreateManyAdministrationPipe } from './pipes/create-many-administration.pipe';
 import { AdministrationService } from './administration.service';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
@@ -56,5 +57,58 @@ export class AdministrationController {
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
+
+  @Post('date-range/export/excel')
+  async exportToExcel(@Body() dto: DateRangeDto, @Headers('companyId') companyId: string, @Res() res: Response) {
+    let companyIdNumber: number | undefined;
+    if (companyId) {
+      companyIdNumber = parseInt(companyId, 10);
+      if (isNaN(companyIdNumber)) {
+        throw new BadRequestException('CompanyId must be a valid number.');
+      }
+    }
+    
+    const buffer = await this.service.generateExcelReportByDateRange(dto, companyId);
+    
+    const filename = `administraciones_${dto.startDate}_${dto.endDate}.xlsx`;
+    
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    
+    res.send(buffer);
+  }
+
+  @Post('vehicle/export/excel')
+async exportToExcelByVehicle(@Body() dto: VehicleIdDto, @Res() res: Response) {
+  const buffer = await this.service.generateExcelReportByVehicle(dto);
+  
+  const filename = `administraciones_vehiculo_${dto.vehicleId}.xlsx`;
+  
+  res.set({
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+    'Content-Length': buffer.length,
+  });
+  
+  res.send(buffer);
+}
+
+  @Post('owner/export/excel')
+async exportToExcelByOwner(@Body() dto: OwnerIdDto, @Res() res: Response) {
+  const buffer = await this.service.generateExcelReportByOwner(dto);
+  
+  const filename = `administraciones_propietario_${dto.ownerId}.xlsx`;
+  
+  res.set({
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Disposition': `attachment; filename="${filename}"`,
+    'Content-Length': buffer.length,
+  });
+  
+  res.send(buffer);
+}
 
 }

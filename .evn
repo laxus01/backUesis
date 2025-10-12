@@ -1,0 +1,16 @@
+# Configuración JWT - IMPORTANTE: Cambia JWT_SECRET en producción
+JWT_SECRET=UesisApp2024$SecureKey#BackendAuth!Migration*Safe&Strong
+JWT_EXPIRES_IN=1h
+
+# Base de datos
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
+DB_DATABASE=uesis
+
+# Puerto de la aplicación
+PORT=3000
+
+# Entorno
+NODE_ENV=development

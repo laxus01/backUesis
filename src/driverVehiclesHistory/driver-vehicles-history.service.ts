@@ -72,7 +72,56 @@ export class DriverVehiclesHistoryService {
       queryBuilder.andWhere('history.historyCreatedAt <= :toDate', { toDate: query.toDate });
     }
 
+    // Subconsulta para obtener el MAX(id) por cada originalRecordId
+    const subQuery = this.historyRepo.createQueryBuilder('sub')
+      .select('MAX(sub.id)', 'maxId')
+      .groupBy('sub.originalRecordId');
+
+    // Aplicar los mismos filtros en la subconsulta si existen
+    if (companyId) {
+      subQuery
+        .leftJoin('sub.vehicle', 'subVehicle')
+        .leftJoin('subVehicle.company', 'subCompany')
+        .andWhere('subCompany.id = :companyId', { companyId });
+    }
+
+    if (query.driverId) {
+      subQuery
+        .leftJoin('sub.driver', 'subDriver')
+        .andWhere('subDriver.id = :driverId', { driverId: query.driverId });
+    }
+
+    if (query.vehicleId) {
+      if (!companyId) {
+        subQuery.leftJoin('sub.vehicle', 'subVehicle');
+      }
+      subQuery.andWhere('subVehicle.id = :vehicleId', { vehicleId: query.vehicleId });
+    }
+
+    if (query.originalRecordId) {
+      subQuery.andWhere('sub.originalRecordId = :originalRecordId', { originalRecordId: query.originalRecordId });
+    }
+
+    if (query.actionType) {
+      subQuery.andWhere('sub.actionType = :actionType', { actionType: query.actionType });
+    }
+
+    if (query.changedBy) {
+      subQuery.andWhere('sub.changedBy LIKE :changedBy', { changedBy: `%${query.changedBy}%` });
+    }
+
+    if (query.fromDate) {
+      subQuery.andWhere('sub.historyCreatedAt >= :fromDate', { fromDate: query.fromDate });
+    }
+
+    if (query.toDate) {
+      subQuery.andWhere('sub.historyCreatedAt <= :toDate', { toDate: query.toDate });
+    }
+
+    // Filtrar la consulta principal usando la subconsulta
     return queryBuilder
+      .andWhere(`history.id IN (${subQuery.getQuery()})`)
+      .setParameters(subQuery.getParameters())
       .orderBy('history.historyCreatedAt', 'DESC')
       .getMany();
   }

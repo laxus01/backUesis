@@ -1,8 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
@@ -19,23 +18,29 @@ import { DriverVehiclesModule } from './driverVehicles/driver-vehicles.module';
 import { DriverVehiclesHistoryModule } from './driverVehiclesHistory/driver-vehicles-history.module';
 import { AdministrationModule } from './administration/administration.module';
 import { DocumentsModule } from './documents/documents.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env', // Especificar el archivo de variables de entorno
     }),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DATABASE_HOST || 'metro.proxy.rlwy.net',
-      port: parseInt(process.env.DATABASE_PORT) || 37951,
-      username: process.env.DATABASE_USER || 'root',
-      password: process.env.DATABASE_PASSWORD || 'PVyaOsgVgTeTXCAQNxQeFdkzyfQJUagu',
-      database: process.env.DATABASE_NAME || 'railway',
-      autoLoadEntities: true,
-      synchronize: true,
-      retryAttempts: 10,
-      retryDelay: 3000,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'mysql',
+        host: configService.get('DB_HOST', 'localhost'),
+        port: configService.get('DB_PORT', 3306),
+        username: configService.get('DB_USERNAME', 'root'),
+        password: configService.get('DB_PASSWORD', ''),
+        database: configService.get('DB_DATABASE', 'uesis'),
+        autoLoadEntities: true,
+        synchronize: configService.get('NODE_ENV') === 'development',
+        retryAttempts: 10,
+        retryDelay: 3000,
+      }),
+      inject: [ConfigService],
     }),
     AuthModule,
     UsersModule,

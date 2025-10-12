@@ -1,3 +1,3 @@
 export const jwtConstants = {
-    secret: 'Jose*10#'
+    secret: process.env.JWT_SECRET || 'fallback-secret-for-development-only'
 }

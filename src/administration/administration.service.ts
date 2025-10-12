@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
+import * as ExcelJS from 'exceljs';
 import { Administration } from './entities/administration.entity';
 import { CreateAdministrationDto } from './dto/create-administration.dto';
 import { VehiclesService } from '../vehicles/vehicles.service';
@@ -88,6 +89,128 @@ export class AdministrationService {
     const admin = await this.findOne(id);
     await this.adminRepo.remove(admin);
   }
+
+  async generateExcelReportByDateRange(dto: DateRangeDto, companyId?: string): Promise<Buffer> {
+  // Obtener las administraciones con las mismas condiciones que findByDateRange
+  const administrations = await this.findByDateRange(dto, companyId ? parseInt(companyId) : undefined);
+  
+  const additionalInfo = [
+    `Rango de fechas: ${dto.startDate} - ${dto.endDate}`
+  ];
+  
+  return this.generateExcelFromAdministrations(administrations, additionalInfo);
+}
+
+  async generateExcelReportByOwner(dto: OwnerIdDto): Promise<Buffer> {
+  // Obtener las administraciones por propietario
+  const administrations = await this.findByOwnerId(dto);
+  
+  const additionalInfo = [
+    `Propietario ID: ${dto.ownerId}`,
+    `Propietario: ${administrations[0]?.vehicle?.owner?.name || 'N/A'}`
+  ];
+  
+  return this.generateExcelFromAdministrations(administrations, additionalInfo);
+}
+
+async generateExcelReportByVehicle(dto: VehicleIdDto): Promise<Buffer> {
+  // Obtener las administraciones por vehículo
+  const administrations = await this.findByVehicleId(dto);
+  
+  const additionalInfo = [
+    `Vehículo ID: ${dto.vehicleId}`,
+    `Vehículo (Placa): ${administrations[0]?.vehicle?.plate || 'N/A'}`
+  ];
+  
+  return this.generateExcelFromAdministrations(administrations, additionalInfo);
+}
+
+private async generateExcelFromAdministrations(administrations: Administration[], additionalInfo: string[] = []): Promise<Buffer> {
+  // Crear un nuevo libro de trabajo
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Administraciones');
+
+  // Configurar las columnas
+  worksheet.columns = [
+    { header: 'Fecha', key: 'date', width: 15 },
+    { header: 'Valor', key: 'value', width: 15 },
+    { header: 'Detalle', key: 'detail', width: 40 },
+    { header: 'Pagador', key: 'payer', width: 25 },
+    { header: 'Vehículo (Placa)', key: 'vehiclePlate', width: 20 },
+    { header: 'Usuario', key: 'user', width: 25 },
+    { header: 'Fecha de Creación', key: 'createdAt', width: 20 },
+  ];
+
+  // Estilizar el encabezado
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: '366092' },
+  };
+  headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // Agregar los datos
+  administrations.forEach((admin, index) => {
+    const row = worksheet.addRow({
+      date: admin.date,
+      value: admin.value,
+      detail: admin.detail || 'N/A',
+      payer: admin.payer || 'N/A',
+      vehiclePlate: admin.vehicle?.plate || 'N/A',
+      user: admin.user?.name || 'N/A',
+      createdAt: admin.createdAt ? new Date(admin.createdAt).toLocaleDateString('es-ES') : 'N/A',
+    });
+
+    // Alternar colores de fila para mejor legibilidad
+    if (index % 2 === 0) {
+      row.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'F8F9FA' },
+      };
+    }
+  });
+
+  // Agregar bordes a todas las celdas
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+  });
+
+  // Agregar información adicional al final
+  const lastRow = worksheet.lastRow.number + 2;
+  worksheet.getCell(`A${lastRow}`).value = `Total de administraciones: ${administrations.length}`;
+  worksheet.getCell(`A${lastRow}`).font = { bold: true };
+  
+  const dateRow = lastRow + 1;
+  worksheet.getCell(`A${dateRow}`).value = `Fecha de generación: ${new Date().toLocaleDateString('es-ES')}`;
+  worksheet.getCell(`A${dateRow}`).font = { italic: true };
+
+  // Agregar información adicional específica
+  additionalInfo.forEach((info, index) => {
+    const infoRow = lastRow + 2 + index;
+    worksheet.getCell(`A${infoRow}`).value = info;
+    worksheet.getCell(`A${infoRow}`).font = { italic: true };
+  });
+
+  // Calcular el total de valores
+  const totalValue = administrations.reduce((sum, admin) => sum + admin.value, 0);
+  const totalRow = lastRow + 2 + additionalInfo.length + 1;
+  worksheet.getCell(`A${totalRow}`).value = `Valor total: ${totalValue.toLocaleString('es-ES')}`;
+  worksheet.getCell(`A${totalRow}`).font = { bold: true, color: { argb: '366092' } };
+
+  // Generar el buffer del archivo Excel
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
 
   private async _dtoToEntity(dto: CreateAdministrationDto): Promise<Administration> {
     const vehicle = await this.vehiclesService.findOne(dto.vehicleId);
