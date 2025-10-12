@@ -1,4 +1,4 @@
-import { IsDateString, IsInt, IsOptional, IsPositive, IsString, IsUrl, Length } from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, IsUrl, Length, MaxLength, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdateDriverDto {
@@ -68,4 +68,13 @@ export class UpdateDriverDto {
   @IsUrl({ require_tld: false })
   @Length(1, 500)
   photo?: string;
+}
+
+// DTO para el cambio de estado
+export class ToggleStateDriverDto {
+  @IsString({ message: 'La razón debe ser un texto' })
+  @IsNotEmpty({ message: 'La razón es requerida' })
+  @MinLength(3, { message: 'La razón debe tener al menos 3 caracteres' })
+  @MaxLength(255, { message: 'La razón no puede exceder 255 caracteres' })
+  reason: string;
 }

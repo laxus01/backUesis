@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Vehicle } from './entities/vehicle.entity';
+import { VehicleStateHistory } from './entities/vehicle-state-history.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { QueryVehicleDto } from './dto/query-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -11,6 +12,7 @@ import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 export class VehiclesService {
   constructor(
     @InjectRepository(Vehicle) private vehiclesRepository: Repository<Vehicle>,
+    @InjectRepository(VehicleStateHistory) private vehicleStateHistoryRepository: Repository<VehicleStateHistory>,
   ) {}
 
   async findAll({ plate }: QueryVehicleDto, companyId?: number) {
@@ -118,6 +120,85 @@ export class VehiclesService {
       throw new HttpException('Vehicle not found', HttpStatus.NOT_FOUND);
     }
     return this.vehiclesRepository.remove(existing);
+  }
+
+  async toggleState(vehicleId: number, reason: string) {
+    // Buscar el vehículo
+    const vehicle = await this.vehiclesRepository.findOne({ 
+      where: { id: vehicleId },
+      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company']
+    });
+
+    if (!vehicle) {
+      throw new HttpException({
+        message: 'Vehículo no encontrado',
+        error: 'VEHICLE_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        vehicleId
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Cambiar el estado: si es 0 pasa a 1, si es 1 pasa a 0
+    const newState = vehicle.state === 0 ? 1 : 0;
+    const previousState = vehicle.state;
+
+    // Guardar en el historial antes de actualizar
+    const historyEntry = this.vehicleStateHistoryRepository.create({
+      vehicleId,
+      vehicle,
+      previousState,
+      newState,
+      reason
+    });
+    await this.vehicleStateHistoryRepository.save(historyEntry);
+
+    // Actualizar el estado
+    await this.vehiclesRepository.update(vehicleId, { state: newState });
+
+    // Obtener el vehículo actualizado
+    const updatedVehicle = await this.vehiclesRepository.findOne({
+      where: { id: vehicleId },
+      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company']
+    });
+
+    return {
+      message: `Estado del vehículo cambiado exitosamente de ${previousState} a ${newState}`,
+      vehicle: updatedVehicle,
+      previousState,
+      newState,
+      reason,
+      changedAt: new Date().toISOString(),
+      historyId: historyEntry.id
+    };
+  }
+
+  async getStateHistory(vehicleId: number) {
+    // Verificar que el vehículo existe
+    const vehicle = await this.vehiclesRepository.findOne({ where: { id: vehicleId } });
+    
+    if (!vehicle) {
+      throw new HttpException({
+        message: 'Vehículo no encontrado',
+        error: 'VEHICLE_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        vehicleId
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Obtener el historial ordenado por fecha de creación descendente
+    const history = await this.vehicleStateHistoryRepository.find({
+      where: { vehicleId },
+      relations: ['vehicle'],
+      order: { createdAt: 'DESC' }
+    });
+
+    return {
+      vehicleId,
+      vehiclePlate: vehicle.plate,
+      currentState: vehicle.state,
+      totalChanges: history.length,
+      history
+    };
   }
 
   async generateExcelReport(queryParams: QueryVehicleDto = {}, companyId?: string): Promise<Buffer> {

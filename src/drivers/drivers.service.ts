@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Raw, Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Driver } from './entities/driver.entity';
+import { DriverStateHistory } from './entities/driver-state-history';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverDto } from './dto/update-driver.dto';
 import { DriverVehicle } from '../driverVehicles/entities/driver-vehicle.entity';
@@ -11,6 +12,7 @@ import { DriverVehicle } from '../driverVehicles/entities/driver-vehicle.entity'
 export class DriversService {
   constructor(
     @InjectRepository(Driver) private repo: Repository<Driver>,
+    @InjectRepository(DriverStateHistory) private driverStateHistoryRepository: Repository<DriverStateHistory>,
     @InjectRepository(DriverVehicle) private driverVehicleRepo: Repository<DriverVehicle>,
   ) { }
 
@@ -128,6 +130,86 @@ export class DriversService {
         name: `${driver.firstName} ${driver.lastName}`,
         identification: driver.identification
       }
+    };
+  }
+
+  async toggleState(driverId: number, reason: string) {
+    // Buscar el conductor
+    const driver = await this.repo.findOne({ 
+      where: { id: driverId },
+      relations: ['eps', 'arl']
+    });
+
+    if (!driver) {
+      throw new HttpException({
+        message: 'Conductor no encontrado',
+        error: 'DRIVER_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        driverId
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Cambiar el estado: si es 0 pasa a 1, si es 1 pasa a 0
+    const newState = driver.state === 0 ? 1 : 0;
+    const previousState = driver.state;
+
+    // Guardar en el historial antes de actualizar
+    const historyEntry = this.driverStateHistoryRepository.create({
+      driverId,
+      driver,
+      previousState,
+      newState,
+      reason
+    });
+    await this.driverStateHistoryRepository.save(historyEntry);
+
+    // Actualizar el estado
+    await this.repo.update(driverId, { state: newState });
+
+    // Obtener el conductor actualizado
+    const updatedDriver = await this.repo.findOne({
+      where: { id: driverId },
+      relations: ['eps', 'arl']
+    });
+
+    return {
+      message: `Estado del conductor cambiado exitosamente de ${previousState} a ${newState}`,
+      driver: this._transformDriver(updatedDriver),
+      previousState,
+      newState,
+      reason,
+      changedAt: new Date().toISOString(),
+      historyId: historyEntry.id
+    };
+  }
+
+  async getStateHistory(driverId: number) {
+    // Verificar que el conductor existe
+    const driver = await this.repo.findOne({ where: { id: driverId } });
+    
+    if (!driver) {
+      throw new HttpException({
+        message: 'Conductor no encontrado',
+        error: 'DRIVER_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        driverId
+      }, HttpStatus.NOT_FOUND);
+    }
+
+    // Obtener el historial ordenado por fecha de creación descendente
+    const history = await this.driverStateHistoryRepository.find({
+      where: { driverId },
+      relations: ['driver'],
+      order: { createdAt: 'DESC' }
+    });
+
+    return {
+      driverId,
+      driverName: `${driver.firstName} ${driver.lastName}`,
+      driverIdentification: driver.identification,
+      currentState: driver.state,
+      totalChanges: history.length,
+      history
     };
   }
 

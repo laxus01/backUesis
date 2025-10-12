@@ -51,4 +51,8 @@ export class Driver {
   
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @Column({ type: 'int', default: 1 })
+  state: number;
+
 }
