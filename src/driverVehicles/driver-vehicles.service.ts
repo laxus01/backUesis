@@ -169,7 +169,7 @@ export class DriverVehiclesService {
     }
   }
 
-  async findByExpirationDate(expirationDate: string, fieldName: string, companyId?: number) {
+  async findByExpirationDate(startDate: string, endDate: string, fieldName: string, companyId?: number) {
     // Validar que el campo sea uno de los permitidos
     const allowedFields = [
       'permit_expires_on',
@@ -190,9 +190,6 @@ export class DriverVehiclesService {
       }, HttpStatus.BAD_REQUEST);
     }
 
-    // Obtener fecha actual en formato YYYY-MM-DD
-    const currentDate = new Date().toISOString().split('T')[0];
-
     const queryBuilder = this.repo.createQueryBuilder('driverVehicle')
       .leftJoinAndSelect('driverVehicle.driver', 'driver')
       .leftJoinAndSelect('driverVehicle.vehicle', 'vehicle')
@@ -207,11 +204,11 @@ export class DriverVehiclesService {
     }
 
     // Aplicar filtro según el campo especificado
-    // Filtrar: fecha_campo >= fecha_actual AND fecha_campo <= fecha_recibida
+    // Filtrar: fecha_campo >= startDate AND fecha_campo <= endDate
     if (fieldName === 'expires_on') {
       // Campo de la tabla drivers
-      queryBuilder.andWhere('driver.expiresOn >= :currentDate', { currentDate });
-      queryBuilder.andWhere('driver.expiresOn <= :expirationDate', { expirationDate });
+      queryBuilder.andWhere('driver.expiresOn >= :startDate', { startDate });
+      queryBuilder.andWhere('driver.expiresOn <= :endDate', { endDate });
     } else {
       // Campos de la tabla drivers_vehicles - mapeo correcto
       let columnName: string;
@@ -237,8 +234,8 @@ export class DriverVehiclesService {
         default:
           columnName = fieldName;
       }
-      queryBuilder.andWhere(`driverVehicle.${columnName} >= :currentDate`, { currentDate });
-      queryBuilder.andWhere(`driverVehicle.${columnName} <= :expirationDate`, { expirationDate });
+      queryBuilder.andWhere(`driverVehicle.${columnName} >= :startDate`, { startDate });
+      queryBuilder.andWhere(`driverVehicle.${columnName} <= :endDate`, { endDate });
     }
 
     return queryBuilder

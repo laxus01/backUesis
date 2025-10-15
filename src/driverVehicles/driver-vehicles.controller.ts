@@ -36,10 +36,11 @@ export class DriverVehiclesController {
   @Get('expiring')
   findByExpirationDate(
     @Headers('companyId') companyId: string,
-    @Query('expirationDate') expirationDate: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
     @Query('fieldName') fieldName: string
   ) {
-    return this.service.findByExpirationDate(expirationDate, fieldName, companyId ? Number(companyId) : undefined);
+    return this.service.findByExpirationDate(startDate, endDate, fieldName, companyId ? Number(companyId) : undefined);
   }
 
   @Put(':id')
