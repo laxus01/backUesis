@@ -6,6 +6,17 @@ export class AuthResponseDto implements IAuthResponse {
     id: string;
     name: string;
     user: string;
+    company?: {
+      id: string;
+      name: string;
+      nit: string;
+      phone: string;
+      address: string;
+      contractual?: string;
+      contractualExpires?: string;
+      extraContractual?: string;
+      extraContractualExpires?: string;
+    };
   };
 }
 

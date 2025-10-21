@@ -43,7 +43,19 @@ export class AuthService {
         user: {
           id: findUser.id.toString(),
           name: findUser.name,
-          user: findUser.user
+          user: findUser.user,
+          // Incluir información de la compañía si el usuario tiene una asignada
+          company: findUser.company ? {
+            id: findUser.company.id.toString(),
+            name: findUser.company.name,
+            nit: findUser.company.nit,
+            phone: findUser.company.phone,
+            address: findUser.company.address,
+            contractual: findUser.company.contractual,
+            extraContractual: findUser.company.extraContractual,
+            contractualExpires: findUser.company.contractualExpires,
+            extraContractualExpires: findUser.company.extraContractualExpires,
+          } : undefined
         },
       };
 

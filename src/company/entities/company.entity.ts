@@ -17,6 +17,18 @@ export class Company {
 
   @Column({ length: 200, nullable: true })
   address?: string;
+
+  @Column({ length: 200, nullable: true })
+  contractual?: string;
+
+  @Column({ type: 'date', name: 'contractual_expires', nullable: true })
+  contractualExpires: string; 
+
+  @Column({ length: 200, nullable: true })
+  extraContractual?: string;
+
+  @Column({ type: 'date', name: 'extra_contractual_expires', nullable: true })
+  extraContractualExpires: string; 
   
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
