@@ -6,6 +6,7 @@ export class AuthResponseDto implements IAuthResponse {
     id: string;
     name: string;
     user: string;
+    permissions: string;
     company?: {
       id: string;
       name: string;

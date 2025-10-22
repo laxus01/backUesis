@@ -44,6 +44,7 @@ export class AuthService {
           id: findUser.id.toString(),
           name: findUser.name,
           user: findUser.user,
+          permissions: findUser.permissions,
           // Incluir información de la compañía si el usuario tiene una asignada
           company: findUser.company ? {
             id: findUser.company.id.toString(),
