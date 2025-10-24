@@ -4,6 +4,7 @@ import { Like, Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Vehicle } from './entities/vehicle.entity';
 import { VehicleStateHistory } from './entities/vehicle-state-history.entity';
+import { DriverVehicle } from '../driverVehicles/entities/driver-vehicle.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { QueryVehicleDto } from './dto/query-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -13,6 +14,7 @@ export class VehiclesService {
   constructor(
     @InjectRepository(Vehicle) private vehiclesRepository: Repository<Vehicle>,
     @InjectRepository(VehicleStateHistory) private vehicleStateHistoryRepository: Repository<VehicleStateHistory>,
+    @InjectRepository(DriverVehicle) private driverVehicleRepository: Repository<DriverVehicle>,
   ) {}
 
   async findAll({ plate }: QueryVehicleDto, companyId?: number) {
@@ -47,7 +49,8 @@ export class VehiclesService {
   async create(data: CreateVehicleDto) {
     try {
       const entity = this.vehiclesRepository.create(this._dtoToEntity(data));
-      return await this.vehiclesRepository.save(entity);
+      const saved = await this.vehiclesRepository.save(entity) as unknown as Vehicle;
+      return saved;
     } catch (error) {
       this._handleError(error);
     }
@@ -58,9 +61,10 @@ export class VehiclesService {
     const failed: Array<{ input: CreateVehicleDto; reason: string }> = [];
     for (const data of items) {
       try {
-        const entity = this.vehiclesRepository.create(this._dtoToEntity(data));
+        const entityData = this._dtoToEntity(data);
+        const entity = this.vehiclesRepository.create(entityData);
         const saved = await this.vehiclesRepository.save(entity);
-        created.push(saved);
+        created.push(saved as unknown as Vehicle);
       } catch (error: any) {
         const reason = error?.code === 'ER_DUP_ENTRY'
           ? 'Vehicle already exists (duplicate plate)'
@@ -89,37 +93,61 @@ export class VehiclesService {
     }
   }
 
-  private _dtoToEntity(data: Partial<CreateVehicleDto | UpdateVehicleDto>) {
-    const entity: Partial<Vehicle> = {};
-    if (data.plate !== undefined) entity.plate = data.plate;
-    if (data.model !== undefined) entity.model = data.model;
-    if (data.internalNumber !== undefined) entity.internalNumber = data.internalNumber;
-    if (data.mobileNumber !== undefined) entity.mobileNumber = data.mobileNumber;
-    if (data.engineNumber !== undefined) entity.engineNumber = data.engineNumber;
-    if (data.chassisNumber !== undefined) entity.chassisNumber = data.chassisNumber;
-    if (data.line !== undefined) entity.line = data.line;
-    if (data.entryDate !== undefined) entity.entryDate = data.entryDate;
-    if (data.makeId !== undefined) entity.make = { id: data.makeId } as any;
-    if (data.insurerId !== undefined) entity.insurer = data.insurerId > 0 ? { id: data.insurerId } as any : null;
-    if (data.communicationCompanyId !== undefined) entity.communicationCompany = data.communicationCompanyId > 0 ? { id: data.communicationCompanyId } as any : null;
-    if (data.ownerId !== undefined) entity.owner = data.ownerId > 0 ? { id: data.ownerId } as any : null;
-    if (data.companyId !== undefined) entity.company = { id: data.companyId } as any;
-    return entity;
-  }
-
-  private _handleError(error: any) {
-    if (error?.code === 'ER_DUP_ENTRY') {
-      throw new HttpException('Vehicle already exists (duplicate plate)', HttpStatus.CONFLICT);
-    }
-    throw new HttpException(error.message || 'Error processing request', HttpStatus.INTERNAL_SERVER_ERROR);
-  }
-
   async remove(id: number) {
-    const existing = await this.vehiclesRepository.findOne({ where: { id } });
+    // Verificar si el vehículo existe
+    const existing = await this.vehiclesRepository.findOne({ 
+      where: { id },
+      relations: ['make', 'company']
+    });
+    
     if (!existing) {
-      throw new HttpException('Vehicle not found', HttpStatus.NOT_FOUND);
+      throw new HttpException({
+        message: 'Vehículo no encontrado',
+        error: 'VEHICLE_NOT_FOUND',
+        statusCode: HttpStatus.NOT_FOUND,
+        vehicleId: id
+      }, HttpStatus.NOT_FOUND);
     }
-    return this.vehiclesRepository.remove(existing);
+
+    // Verificar si el vehículo tiene conductores asignados
+    const assignedDrivers = await this.driverVehicleRepository.find({
+      where: { vehicle: { id } },
+      relations: ['driver']
+    });
+
+    if (assignedDrivers.length > 0) {
+      const driversInfo = assignedDrivers.map(dv => ({
+        id: dv.driver.id,
+        firstName: dv.driver.firstName,
+        lastName: dv.driver.lastName,
+        identification: dv.driver.identification
+      }));
+
+      throw new HttpException({
+        message: `No se puede eliminar el vehículo porque tiene ${assignedDrivers.length} conductor(es) asignado(s)`,
+        error: 'VEHICLE_HAS_ASSIGNED_DRIVERS',
+        statusCode: HttpStatus.CONFLICT,
+        vehicleId: id,
+        vehiclePlate: existing.plate,
+        assignedDriversCount: assignedDrivers.length,
+        assignedDrivers: driversInfo
+      }, HttpStatus.CONFLICT);
+    }
+
+    // Si no hay conductores asignados, proceder con la eliminación
+    await this.vehiclesRepository.remove(existing);
+    
+    return {
+      message: 'Vehículo eliminado exitosamente',
+      success: true,
+      deletedVehicle: {
+        id: id,
+        plate: existing.plate,
+        model: existing.model,
+        make: existing.make?.name,
+        company: existing.company?.name
+      }
+    };
   }
 
   async toggleState(vehicleId: number, reason: string) {
@@ -405,5 +433,57 @@ export class VehiclesService {
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  /**
+   * Transforma un DTO en un objeto compatible con la entidad Vehicle
+   * Convierte los IDs de relaciones en objetos con formato { id: number }
+   */
+  private _dtoToEntity(dto: CreateVehicleDto | UpdateVehicleDto): any {
+    const entity: any = { ...dto };
+
+    // Transformar las relaciones de IDs a objetos
+    if (dto.makeId !== undefined) {
+      entity.make = { id: dto.makeId };
+      delete entity.makeId;
+    }
+
+    if (dto.insurerId !== undefined) {
+      entity.insurer = dto.insurerId > 0 ? { id: dto.insurerId } : null;
+      delete entity.insurerId;
+    }
+
+    if (dto.communicationCompanyId !== undefined) {
+      entity.communicationCompany = dto.communicationCompanyId > 0 ? { id: dto.communicationCompanyId } : null;
+      delete entity.communicationCompanyId;
+    }
+
+    if (dto.ownerId !== undefined) {
+      entity.owner = dto.ownerId > 0 ? { id: dto.ownerId } : null;
+      delete entity.ownerId;
+    }
+
+    if (dto.companyId !== undefined) {
+      entity.company = { id: dto.companyId };
+      delete entity.companyId;
+    }
+
+    return entity;
+  }
+
+  /**
+   * Maneja errores comunes de base de datos
+   */
+  private _handleError(error: any): never {
+    if (error?.code === 'ER_DUP_ENTRY') {
+      throw new HttpException(
+        'El vehículo ya existe (placa duplicada)',
+        HttpStatus.CONFLICT
+      );
+    }
+    throw new HttpException(
+      error.message || 'Error al procesar la solicitud',
+      HttpStatus.INTERNAL_SERVER_ERROR
+    );
   }
 }
