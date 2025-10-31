@@ -46,10 +46,6 @@ export class CreateVehicleDto {
 
   @IsInt()
   @IsPositive()
-  insurerId: number;
-
-  @IsInt()
-  @IsPositive()
   communicationCompanyId: number;
 
   @IsInt()

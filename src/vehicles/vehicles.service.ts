@@ -5,6 +5,7 @@ import * as ExcelJS from 'exceljs';
 import { Vehicle } from './entities/vehicle.entity';
 import { VehicleStateHistory } from './entities/vehicle-state-history.entity';
 import { DriverVehicle } from '../driverVehicles/entities/driver-vehicle.entity';
+import { VehiclePolicy } from '../vehicle-policy/entities/vehicle-policy.entity';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { QueryVehicleDto } from './dto/query-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
@@ -15,6 +16,7 @@ export class VehiclesService {
     @InjectRepository(Vehicle) private vehiclesRepository: Repository<Vehicle>,
     @InjectRepository(VehicleStateHistory) private vehicleStateHistoryRepository: Repository<VehicleStateHistory>,
     @InjectRepository(DriverVehicle) private driverVehicleRepository: Repository<DriverVehicle>,
+    @InjectRepository(VehiclePolicy) private vehiclePolicyRepository: Repository<VehiclePolicy>,
   ) {}
 
   async findAll({ plate }: QueryVehicleDto, companyId?: number) {
@@ -25,25 +27,39 @@ export class VehiclesService {
     if (companyId) {
       where.company = { id: companyId };
     }
-    return this.vehiclesRepository.find({
+    const vehicles = await this.vehiclesRepository.find({
       where,
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
       order: { createdAt: 'DESC' }
     });
+    
+    return this._attachActivePolicy(vehicles);
   }
 
   async findOne(id: number) {
-    return this.vehiclesRepository.findOne({
+    const vehicle = await this.vehiclesRepository.findOne({
       where: { id },
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
     });
+    
+    if (!vehicle) {
+      return null;
+    }
+    
+    return this._attachActivePolicy(vehicle);
   }
 
   async findByOwnerId(ownerId: number) {
-    return this.vehiclesRepository.findOne({
+    const vehicle = await this.vehiclesRepository.findOne({
       where: { owner: { id: ownerId } as any },
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
     });
+    
+    if (!vehicle) {
+      return null;
+    }
+    
+    return this._attachActivePolicy(vehicle);
   }
 
   async create(data: CreateVehicleDto) {
@@ -154,7 +170,7 @@ export class VehiclesService {
     // Buscar el vehículo
     const vehicle = await this.vehiclesRepository.findOne({ 
       where: { id: vehicleId },
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company']
+      relations: ['make', 'communicationCompany', 'owner', 'company']
     });
 
     if (!vehicle) {
@@ -186,7 +202,7 @@ export class VehiclesService {
     // Obtener el vehículo actualizado
     const updatedVehicle = await this.vehiclesRepository.findOne({
       where: { id: vehicleId },
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company']
+      relations: ['make', 'communicationCompany', 'owner', 'company']
     });
 
     return {
@@ -244,7 +260,6 @@ export class VehiclesService {
       { header: 'Modelo', key: 'model', width: 20 },
       { header: 'Marca', key: 'make', width: 20 },
       { header: 'Número Interno', key: 'internalNumber', width: 15 },
-      { header: 'Aseguradora', key: 'insurer', width: 25 },
       { header: 'Empresa de Comunicación', key: 'communicationCompany', width: 30 },
       { header: 'Número Móvil', key: 'mobileNumber', width: 15 },
       { header: 'Propietario', key: 'owner', width: 30 },
@@ -273,7 +288,6 @@ export class VehiclesService {
         model: vehicle.model,
         make: vehicle.make?.name || 'N/A',
         internalNumber: vehicle.internalNumber || 'N/A',
-        insurer: vehicle.insurer?.name || 'N/A',
         communicationCompany: vehicle.communicationCompany?.name || 'N/A',
         mobileNumber: vehicle.mobileNumber || 'N/A',
         owner: vehicle.owner?.name || 'N/A',
@@ -324,7 +338,7 @@ export class VehiclesService {
     // Obtener vehículos específicos por IDs
     const vehicles = await this.vehiclesRepository.find({
       where: vehicleIds.map(id => ({ id })),
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
       order: { id: 'ASC' },
     });
 
@@ -344,7 +358,7 @@ export class VehiclesService {
 
     return this.vehiclesRepository.find({
       where,
-      relations: ['make', 'insurer', 'communicationCompany', 'owner', 'company'],
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
       order: { id: 'ASC' },
     });
   }
@@ -360,7 +374,6 @@ export class VehiclesService {
       { header: 'Modelo', key: 'model', width: 20 },
       { header: 'Marca', key: 'make', width: 20 },
       { header: 'Número Interno', key: 'internalNumber', width: 15 },
-      { header: 'Aseguradora', key: 'insurer', width: 25 },
       { header: 'Empresa de Comunicación', key: 'communicationCompany', width: 30 },
       { header: 'Número Móvil', key: 'mobileNumber', width: 15 },
       { header: 'Propietario', key: 'owner', width: 30 },
@@ -389,7 +402,6 @@ export class VehiclesService {
         model: vehicle.model,
         make: vehicle.make?.name || 'N/A',
         internalNumber: vehicle.internalNumber || 'N/A',
-        insurer: vehicle.insurer?.name || 'N/A',
         communicationCompany: vehicle.communicationCompany?.name || 'N/A',
         mobileNumber: vehicle.mobileNumber || 'N/A',
         owner: vehicle.owner?.name || 'N/A',
@@ -448,11 +460,6 @@ export class VehiclesService {
       delete entity.makeId;
     }
 
-    if (dto.insurerId !== undefined) {
-      entity.insurer = dto.insurerId > 0 ? { id: dto.insurerId } : null;
-      delete entity.insurerId;
-    }
-
     if (dto.communicationCompanyId !== undefined) {
       entity.communicationCompany = dto.communicationCompanyId > 0 ? { id: dto.communicationCompanyId } : null;
       delete entity.communicationCompanyId;
@@ -485,5 +492,37 @@ export class VehiclesService {
       error.message || 'Error al procesar la solicitud',
       HttpStatus.INTERNAL_SERVER_ERROR
     );
+  }
+
+  /**
+   * Agrega la póliza activa a un vehículo o array de vehículos
+   */
+  private async _attachActivePolicy(vehicles: Vehicle | Vehicle[]): Promise<any> {
+    const vehiclesArray = Array.isArray(vehicles) ? vehicles : [vehicles];
+    
+    if (vehiclesArray.length === 0) {
+      return vehicles;
+    }
+
+    // Obtener todas las pólizas activas para los vehículos
+    const vehicleIds = vehiclesArray.map(v => v.id);
+    const activePolicies = await this.vehiclePolicyRepository.find({
+      where: vehicleIds.map(id => ({ vehicleId: id, state: 1 })),
+      relations: ['policy', 'policy.insurer', 'policy.company'],
+    });
+
+    // Crear un mapa de vehicleId -> póliza activa
+    const policyMap = new Map();
+    activePolicies.forEach(vp => {
+      policyMap.set(vp.vehicleId, vp.policy);
+    });
+
+    // Agregar la póliza a cada vehículo
+    const result = vehiclesArray.map(vehicle => ({
+      ...vehicle,
+      police: policyMap.get(vehicle.id) || null,
+    }));
+
+    return Array.isArray(vehicles) ? result : result[0];
   }
 }

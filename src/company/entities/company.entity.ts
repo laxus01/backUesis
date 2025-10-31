@@ -18,17 +18,11 @@ export class Company {
   @Column({ length: 200, nullable: true })
   address?: string;
 
-  @Column({ length: 200, nullable: true })
-  contractual?: string;
+  @Column({ name: 'manager_name', length: 200, nullable: true })
+  managerName?: string;
 
-  @Column({ type: 'date', name: 'contractual_expires', nullable: true })
-  contractualExpires: string; 
-
-  @Column({ length: 200, nullable: true })
-  extraContractual?: string;
-
-  @Column({ type: 'date', name: 'extra_contractual_expires', nullable: true })
-  extraContractualExpires: string; 
+  @Column({ name: 'manager_phone', length: 20, nullable: true })
+  managerPhone?: string;
   
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

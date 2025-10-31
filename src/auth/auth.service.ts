@@ -1,8 +1,11 @@
 import { Injectable, UnauthorizedException, Logger, Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { LoginAuthDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth.dto';
 import { IAuthRepository, AUTH_REPOSITORY_TOKEN } from './interfaces/auth-manager.interface';
+import { Policy } from '../policy/entities/policy.entity';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -13,6 +16,8 @@ export class AuthService {
     @Inject(AUTH_REPOSITORY_TOKEN)
     private readonly authRepository: IAuthRepository,
     private readonly jwtAuthService: JwtService,
+    @InjectRepository(Policy)
+    private readonly policyRepository: Repository<Policy>,
   ) {}
 
   async login(userObjectLogin: LoginAuthDto): Promise<AuthResponseDto> {
@@ -38,6 +43,15 @@ export class AuthService {
       const payload = { id: findUser.id, name: findUser.name };
       const token = this.jwtAuthService.sign(payload);
 
+      // Obtener la póliza activa (state=1) de la compañía si el usuario tiene una asignada
+      let latestPolicy = null;
+      if (findUser.company) {
+        latestPolicy = await this.policyRepository.findOne({
+          where: { companyId: findUser.company.id, state: 1 },
+          order: { createdAt: 'DESC' },
+        });
+      }
+
       const response: AuthResponseDto = {
         token,
         user: {
@@ -52,10 +66,17 @@ export class AuthService {
             nit: findUser.company.nit,
             phone: findUser.company.phone,
             address: findUser.company.address,
-            contractual: findUser.company.contractual,
-            extraContractual: findUser.company.extraContractual,
-            contractualExpires: findUser.company.contractualExpires,
-            extraContractualExpires: findUser.company.extraContractualExpires,
+          } : undefined,
+          // Incluir la última póliza si existe
+          policy: latestPolicy ? {
+            id: latestPolicy.id,
+            insurerId: latestPolicy.insurerId,
+            insurerName: latestPolicy.insurer?.name,
+            contractual: latestPolicy.contractual,
+            contractualExpires: latestPolicy.contractualExpires,
+            extraContractual: latestPolicy.extraContractual,
+            extraContractualExpires: latestPolicy.extraContractualExpires,
+            createdAt: latestPolicy.createdAt,
           } : undefined
         },
       };

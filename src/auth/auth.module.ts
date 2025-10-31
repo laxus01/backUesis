@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from 'src/users/entities/user.entity';
 import { Company } from 'src/company/entities/company.entity';
+import { Policy } from 'src/policy/entities/policy.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './jwt.constants';
 import { JwtStrategy } from './jwt.stategy';
@@ -12,7 +13,7 @@ import { AUTH_REPOSITORY_TOKEN } from './interfaces/auth-manager.interface';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Company]),
+    TypeOrmModule.forFeature([User, Company, Policy]),
     JwtModule.register({
       secret: jwtConstants.secret,
       signOptions: {

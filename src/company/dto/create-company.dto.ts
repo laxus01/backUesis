@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length, IsDateString } from 'class-validator';
+import { IsOptional, IsString, Length } from 'class-validator';
 
 export class CreateCompanyDto {
   @IsString()
@@ -22,18 +22,10 @@ export class CreateCompanyDto {
   @IsOptional()
   @IsString()
   @Length(0, 200)
-  contractual?: string;
-
-  @IsOptional()
-  @IsDateString()
-  contractualExpires?: string;
+  managerName?: string;
 
   @IsOptional()
   @IsString()
-  @Length(0, 200)
-  extraContractual?: string;
-
-  @IsOptional()
-  @IsDateString()
-  extraContractualExpires?: string;
+  @Length(0, 20)
+  managerPhone?: string;
 }

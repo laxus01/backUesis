@@ -82,4 +82,9 @@ export class VehiclesController {
   ) {
     return this.vehiclesService.toggleState(id, toggleStateDto.reason);
   }
+
+  @Get(':id/state-history')
+  async getStateHistory(@Param('id', ParseIntPipe) id: number) {
+    return this.vehiclesService.getStateHistory(id);
+  }
 }

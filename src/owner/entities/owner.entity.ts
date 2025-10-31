@@ -13,6 +13,9 @@ export class Owner {
   @Column({ type: 'bigint' })
   identification: number;
 
+  @Column({ length: 100 })
+  issuedIn: string;
+
   @Column({ length: 120, nullable: true })
   email?: string;
 

@@ -1,9 +1,8 @@
   import { Column, Entity, PrimaryGeneratedColumn, Unique, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
- import { Make } from '../../make/entities/make.entity';
- import { Insurer } from '../../insurer/entities/insurer.entity';
- import { CommunicationCompany } from '../../communicationCompany/entities/communication-company.entity';
- import { Owner } from '../../owner/entities/owner.entity';
- import { Company } from '../../company/entities/company.entity';
+import { Make } from '../../make/entities/make.entity';
+import { CommunicationCompany } from '../../communicationCompany/entities/communication-company.entity';
+import { Owner } from '../../owner/entities/owner.entity';
+import { Company } from '../../company/entities/company.entity';
 
 @Entity('vehicles')
 @Unique(['plate'])
@@ -24,10 +23,6 @@ export class Vehicle {
 
   @Column({ name: 'internal_number', length: 30, nullable: true })
   internalNumber?: string; // Numero interno
-
-  @ManyToOne(() => Insurer, { eager: false, nullable: true })
-  @JoinColumn({ name: 'insurer_id' })
-  insurer?: Insurer; // Aseguradora
 
   @ManyToOne(() => CommunicationCompany, { eager: false, nullable: true })
   @JoinColumn({ name: 'communication_company_id' })

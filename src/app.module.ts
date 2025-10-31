@@ -18,6 +18,8 @@ import { DriverVehiclesModule } from './driverVehicles/driver-vehicles.module';
 import { DriverVehiclesHistoryModule } from './driverVehiclesHistory/driver-vehicles-history.module';
 import { AdministrationModule } from './administration/administration.module';
 import { DocumentsModule } from './documents/documents.module';
+import { PolicyModule } from './policy/policy.module';
+import { VehiclePolicyModule } from './vehicle-policy/vehicle-policy.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
@@ -58,6 +60,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     DriverVehiclesHistoryModule,
     AdministrationModule,
     DocumentsModule,
+    PolicyModule,
+    VehiclePolicyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

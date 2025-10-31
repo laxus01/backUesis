@@ -5,6 +5,7 @@ import { DriverVehicle } from './entities/driver-vehicle.entity';
 import { CreateDriverVehicleDto } from './dto/create-driver-vehicle.dto';
 import { UpdateDriverVehicleDto } from './dto/update-driver-vehicle.dto';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
+import { VehiclePolicy } from '../vehicle-policy/entities/vehicle-policy.entity';
 import { DriverVehiclesHistoryService } from '../driverVehiclesHistory/driver-vehicles-history.service';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class DriverVehiclesService {
   constructor(
     @InjectRepository(DriverVehicle) private repo: Repository<DriverVehicle>,
     @InjectRepository(Vehicle) private vehiclesRepo: Repository<Vehicle>,
+    @InjectRepository(VehiclePolicy) private vehiclePolicyRepository: Repository<VehiclePolicy>,
     private historyService: DriverVehiclesHistoryService,
   ) { }
 
@@ -62,28 +64,37 @@ export class DriverVehiclesService {
   async findAll(companyId?: number) {
     const where: any = {};
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
-    return this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    const assignments = await this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    return this._attachActivePolicyToAssignments(assignments);
   }
 
   async findByDriver(driverId: number, companyId?: number) {
     const where: any = { driver: { id: driverId } as any };
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
-    return this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    const assignments = await this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    return this._attachActivePolicyToAssignments(assignments);
   }
 
   async findByVehicle(vehicleId: number, companyId?: number) {
     const where: any = { vehicle: { id: vehicleId } as any };
     if (companyId) where.vehicle.company = { id: companyId } as any;
-    return this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    const assignments = await this.repo.find({ where, relations: ['driver', 'vehicle', 'vehicle.company'] });
+    return this._attachActivePolicyToAssignments(assignments);
   }
 
   async findById(id: number, companyId?: number) {
     const where: any = { id };
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
-    return this.repo.findOne({
+    const assignment = await this.repo.findOne({
       where,
-      relations: ['driver', 'driver.eps', 'driver.arl', 'vehicle', 'vehicle.make', 'vehicle.insurer', 'vehicle.communicationCompany', 'vehicle.company', 'vehicle.owner'],
+      relations: ['driver', 'driver.eps', 'driver.arl', 'vehicle', 'vehicle.make', 'vehicle.communicationCompany', 'vehicle.company', 'vehicle.owner'],
     });
+    
+    if (!assignment) {
+      return null;
+    }
+    
+    return this._attachActivePolicyToAssignments(assignment);
   }
 
   async remove(id: number, companyId?: number, changedBy?: string) {
@@ -178,7 +189,8 @@ export class DriverVehiclesService {
       'contractual_expires_on',
       'extra_contractual_expires_on',
       'technical_mechanic_expires_on',
-      'expires_on' // Campo de la tabla drivers
+      'expires_on', // Campo de la tabla drivers
+      'all_documents' // Buscar en todos los campos
     ];
 
     if (!allowedFields.includes(fieldName)) {
@@ -204,8 +216,21 @@ export class DriverVehiclesService {
     }
 
     // Aplicar filtro según el campo especificado
-    // Filtrar: fecha_campo >= startDate AND fecha_campo <= endDate
-    if (fieldName === 'expires_on') {
+    if (fieldName === 'all_documents') {
+      // Buscar en todos los campos de fecha (OR)
+      queryBuilder.andWhere(
+        '(' +
+        '(driver.expiresOn >= :startDate AND driver.expiresOn <= :endDate) OR ' +
+        '(driverVehicle.permitExpiresOn >= :startDate AND driverVehicle.permitExpiresOn <= :endDate) OR ' +
+        '(driverVehicle.soatExpires >= :startDate AND driverVehicle.soatExpires <= :endDate) OR ' +
+        '(driverVehicle.operationCardExpires >= :startDate AND driverVehicle.operationCardExpires <= :endDate) OR ' +
+        '(driverVehicle.contractualExpires >= :startDate AND driverVehicle.contractualExpires <= :endDate) OR ' +
+        '(driverVehicle.extraContractualExpires >= :startDate AND driverVehicle.extraContractualExpires <= :endDate) OR ' +
+        '(driverVehicle.technicalMechanicExpires >= :startDate AND driverVehicle.technicalMechanicExpires <= :endDate)' +
+        ')',
+        { startDate, endDate }
+      );
+    } else if (fieldName === 'expires_on') {
       // Campo de la tabla drivers
       queryBuilder.andWhere('driver.expiresOn >= :startDate', { startDate });
       queryBuilder.andWhere('driver.expiresOn <= :endDate', { endDate });
@@ -241,6 +266,47 @@ export class DriverVehiclesService {
     return queryBuilder
       .orderBy('driverVehicle.id', 'ASC')
       .getMany();
+  }
+
+  /**
+   * Agrega la póliza activa a los vehículos de las asignaciones conductor-vehículo
+   */
+  private async _attachActivePolicyToAssignments(assignments: DriverVehicle | DriverVehicle[]): Promise<any> {
+    const assignmentsArray = Array.isArray(assignments) ? assignments : [assignments];
+    
+    if (assignmentsArray.length === 0) {
+      return assignments;
+    }
+
+    // Obtener los IDs de vehículos únicos
+    const vehicleIds = [...new Set(assignmentsArray.map(a => a.vehicle?.id).filter(id => id))];
+    
+    if (vehicleIds.length === 0) {
+      return assignments;
+    }
+
+    // Obtener todas las pólizas activas para los vehículos
+    const activePolicies = await this.vehiclePolicyRepository.find({
+      where: vehicleIds.map(id => ({ vehicleId: id, state: 1 })),
+      relations: ['policy', 'policy.insurer', 'policy.company'],
+    });
+
+    // Crear un mapa de vehicleId -> póliza activa
+    const policyMap = new Map();
+    activePolicies.forEach(vp => {
+      policyMap.set(vp.vehicleId, vp.policy);
+    });
+
+    // Agregar la póliza a cada vehículo en las asignaciones
+    const result = assignmentsArray.map(assignment => ({
+      ...assignment,
+      vehicle: assignment.vehicle ? {
+        ...assignment.vehicle,
+        police: policyMap.get(assignment.vehicle.id) || null,
+      } : null,
+    }));
+
+    return Array.isArray(assignments) ? result : result[0];
   }
 
 }

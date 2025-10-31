@@ -13,10 +13,16 @@ export class AuthResponseDto implements IAuthResponse {
       nit: string;
       phone: string;
       address: string;
+    };
+    policy?: {
+      id: number;
+      insurerId: number;
+      insurerName?: string;
       contractual?: string;
       contractualExpires?: string;
       extraContractual?: string;
       extraContractualExpires?: string;
+      createdAt: Date;
     };
   };
 }

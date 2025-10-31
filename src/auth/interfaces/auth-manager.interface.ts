@@ -13,10 +13,6 @@ export interface IAuthResponse {
       nit: string;
       phone: string;
       address: string;
-      contractual?: string;
-      extraContractual?: string;
-      contractualExpires?: string;
-      extraContractualExpires?: string;
     };
   };
 }

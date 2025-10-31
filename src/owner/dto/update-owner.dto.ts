@@ -14,6 +14,11 @@ export class UpdateOwnerDto {
   identification?: number;
 
   @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  issuedIn?: string;
+
+  @IsOptional()
   @IsEmail()
   @Length(1, 120)
   email?: string;

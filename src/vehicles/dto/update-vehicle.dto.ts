@@ -29,11 +29,6 @@ export class UpdateVehicleDto {
   @IsOptional()
   @IsInt()
   @IsPositive()
-  insurerId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
   communicationCompanyId?: number;
 
   @IsOptional()
