@@ -20,6 +20,7 @@ import { AdministrationModule } from './administration/administration.module';
 import { DocumentsModule } from './documents/documents.module';
 import { PolicyModule } from './policy/policy.module';
 import { VehiclePolicyModule } from './vehicle-policy/vehicle-policy.module';
+import { AccidentsModule } from './accidents/accidents.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
@@ -32,13 +33,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'mysql',
-        host: configService.get('DB_HOST', 'metro.proxy.rlwy.net'),
-        port: configService.get('DB_PORT', 37951),
-        username: configService.get('DB_USERNAME', 'root'),
-        password: configService.get('DB_PASSWORD', 'PVyaOsgVgTeTXCAQNxQeFdkzyfQJUagu'),
-        database: configService.get('DB_DATABASE', 'railway'),
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_DATABASE'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') === 'development',
+        synchronize: configService.get<string>('NODE_ENV') === 'development',
         retryAttempts: 10,
         retryDelay: 3000,
       }),
@@ -62,6 +63,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     DocumentsModule,
     PolicyModule,
     VehiclePolicyModule,
+    AccidentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
