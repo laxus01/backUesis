@@ -12,8 +12,14 @@ export class UsersService {
   ) { }
 
 
-  async getUsers() {
-    const users = await this.userRepository.find({ relations: ['company'] });
+  async getUsers(companyId?: number) {
+    const whereCondition = companyId ? { company: { id: companyId } } : {};
+    
+    const users = await this.userRepository.find({ 
+      where: whereCondition,
+      relations: ['company'] 
+    });
+    
     return users.map(user => this.sanitizeUser(user));
   }
 

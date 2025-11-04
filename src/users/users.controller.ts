@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, Put, Delete, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Put, Delete, ParseIntPipe, Headers } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -7,8 +7,9 @@ export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Get()
-    async getUsers() {
-        return this.usersService.getUsers();
+    async getUsers(@Headers('companyid') companyId?: string) {
+        const parsedCompanyId = companyId ? parseInt(companyId, 10) : undefined;
+        return this.usersService.getUsers(parsedCompanyId);
     }
 
     @Get(':id')
