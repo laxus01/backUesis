@@ -35,11 +35,13 @@ export class DocumentsService {
     // Get company data for manager info
     let managerName = 'CALIXTO E. TUÑON MARTINEZ'; // Default
     let managerPhone = '302-4129946'; // Default
+    let companyName = 'COOTRANSCAS'; // Default
     if (companyId) {
       const company = await this.companyService.findOne(companyId);
       if (company) {
         if (company.managerName) managerName = company.managerName.toUpperCase();
         if (company.managerPhone) managerPhone = company.managerPhone;
+        if (company.name) companyName = company.name.toUpperCase();
       }
     }
     const doc = new PDFDocument({ margin: 50 });
@@ -89,7 +91,7 @@ export class DocumentsService {
     doc
       .fontSize(12)
       .text(
-        sanitize('EL SUSCRITO GERENTE Y REPRESENTANTE LEGAL DE LA COOPERATIVA DE TRANSPORTE DE CONDUCTORES ASOCIADOS DE SINCELEJO “COOTRANSCAS”'),
+        sanitize(`EL SUSCRITO GERENTE Y REPRESENTANTE LEGAL DE ${companyName}`),
         {
           align: 'center'
         },
