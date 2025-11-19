@@ -215,25 +215,24 @@ export class DriverVehiclesService {
       queryBuilder.andWhere('company.id = :companyId', { companyId });
     }
 
-    // Aplicar filtro según el campo especificado
+    // Aplicar filtro según el campo especificado (usando comparaciones de fecha explícitas)
     if (fieldName === 'all_documents') {
       // Buscar en todos los campos de fecha (OR)
       queryBuilder.andWhere(
         '(' +
-        '(driver.expiresOn >= :startDate AND driver.expiresOn <= :endDate) OR ' +
-        '(driverVehicle.permitExpiresOn >= :startDate AND driverVehicle.permitExpiresOn <= :endDate) OR ' +
-        '(driverVehicle.soatExpires >= :startDate AND driverVehicle.soatExpires <= :endDate) OR ' +
-        '(driverVehicle.operationCardExpires >= :startDate AND driverVehicle.operationCardExpires <= :endDate) OR ' +
-        '(driverVehicle.contractualExpires >= :startDate AND driverVehicle.contractualExpires <= :endDate) OR ' +
-        '(driverVehicle.extraContractualExpires >= :startDate AND driverVehicle.extraContractualExpires <= :endDate) OR ' +
-        '(driverVehicle.technicalMechanicExpires >= :startDate AND driverVehicle.technicalMechanicExpires <= :endDate)' +
+        '(DATE(driver.expiresOn) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.permitExpiresOn) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.soatExpires) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.operationCardExpires) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.contractualExpires) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.extraContractualExpires) BETWEEN :startDate AND :endDate) OR ' +
+        '(DATE(driverVehicle.technicalMechanicExpires) BETWEEN :startDate AND :endDate)' +
         ')',
         { startDate, endDate }
       );
     } else if (fieldName === 'expires_on') {
       // Campo de la tabla drivers
-      queryBuilder.andWhere('driver.expiresOn >= :startDate', { startDate });
-      queryBuilder.andWhere('driver.expiresOn <= :endDate', { endDate });
+      queryBuilder.andWhere('DATE(driver.expiresOn) BETWEEN :startDate AND :endDate', { startDate, endDate });
     } else {
       // Campos de la tabla drivers_vehicles - mapeo correcto
       let columnName: string;
@@ -259,8 +258,7 @@ export class DriverVehiclesService {
         default:
           columnName = fieldName;
       }
-      queryBuilder.andWhere(`driverVehicle.${columnName} >= :startDate`, { startDate });
-      queryBuilder.andWhere(`driverVehicle.${columnName} <= :endDate`, { endDate });
+      queryBuilder.andWhere(`DATE(driverVehicle.${columnName}) BETWEEN :startDate AND :endDate`, { startDate, endDate });
     }
 
     return queryBuilder

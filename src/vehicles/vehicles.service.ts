@@ -49,6 +49,18 @@ export class VehiclesService {
     return this._attachActivePolicy(vehicle);
   }
 
+  async findByIds(ids: number[]) {
+    if (!ids || !ids.length) {
+      return [];
+    }
+    const vehicles = await this.vehiclesRepository.find({
+      where: ids.map(id => ({ id })),
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
+    });
+    // Attach active policies to all vehicles and return the resolved array
+    return this._attachActivePolicy(vehicles);
+  }
+
   async findByOwnerId(ownerId: number) {
     const vehicle = await this.vehiclesRepository.findOne({
       where: { owner: { id: ownerId } as any },

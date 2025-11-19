@@ -10,7 +10,7 @@ export class OwnerController {
   constructor(private readonly service: OwnerService) { }
 
   @Get()
-  findAll(
+  async findAll(
     @Query('name') name?: string, 
     @Query('identification') identification?: string,
     @Headers('companyId') companyId?: string
@@ -30,8 +30,21 @@ export class OwnerController {
         throw new BadRequestException('CompanyId must be a valid number.');
       }
     }
-    
-    return this.service.findAll(name, identificationNumber, companyIdNumber);
+
+    const owners = await this.service.findAll(name, identificationNumber, companyIdNumber);
+    const vehicles = await this.service.findVehiclesByOwnerFilters(name, identificationNumber, companyIdNumber);
+
+    const ownersWithCompanyVehicles = owners.map(owner => {
+      const ownerVehicles = vehicles.filter(v => v.owner?.id === owner.id);
+
+      return {
+        ...owner,
+        company: owner.company,
+        vehicles: ownerVehicles,
+      };
+    });
+
+    return ownersWithCompanyVehicles;
   }
   @Get(':id') findOne(@Param('id') id: string) { return this.service.findOne(Number(id)); }
   @Post() 

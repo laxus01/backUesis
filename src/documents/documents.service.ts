@@ -302,19 +302,10 @@ export class DocumentsService {
     const driverName = `${driver.firstName} ${driver.lastName}`.toUpperCase();
     const driverIdentification = driver.identification;
     const issuedIn = driver.issuedIn || 'Sincelejo (Sucre)'; // Fallback si no está definido
-    
+
     doc.fontSize(12);
     doc.text(
-      sanitize(`${companyName} CERTIFICA QUE: El señor `),
-      { continued: true, align: 'justify' }
-    );
-    
-    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(driverName), { continued: true });
-    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    
-    doc.text(
-      sanitize(` identificado con la cédula de ciudadanía No. ${driverIdentification} expedida en ${issuedIn}, ha laborado como conductor en vehículos tipo taxi afiliados a esta empresa, desde el ${dto.startDate} hasta ${dto.endDate}, destacándose por su responsabilidad, amabilidad, sencillez, honradez, trabajo en equipo, dominio de las normas de tránsito y sentido de pertenencia.`),
+      sanitize(`${companyName} CERTIFICA QUE: El señor ${driverName} identificado con la cédula de ciudadanía No. ${driverIdentification} expedida en ${issuedIn}, ha laborado como conductor en vehículos tipo taxi afiliados a esta empresa, desde el ${dto.startDate} hasta ${dto.endDate}, destacándose por su responsabilidad, amabilidad, sencillez, honradez, trabajo en equipo, dominio de las normas de tránsito y sentido de pertenencia.`),
       { align: 'justify' }
     );
 
@@ -358,21 +349,29 @@ export class DocumentsService {
     doc.end();
   }
 
-  async generateOwnerCertificate(ownerId: number, vehicleId: number, dto: OwnerCertificateDto, companyId: number | undefined, @Res() res: Response) {
+  async generateOwnerCertificate(ownerId: number, dto: OwnerCertificateDto, companyId: number | undefined, @Res() res: Response) {
     // Fetch data before starting PDF stream
     const owner = await this.ownerService.findOne(ownerId);
     if (!owner) throw new NotFoundException('Owner not found');
-    
-    const vehicle = await this.vehiclesService.findOne(vehicleId);
-    if (!vehicle) throw new NotFoundException('Vehicle not found');
-    
-    // Validate that the vehicle belongs to the owner
-    if ((vehicle as any).owner?.id !== ownerId) {
-      throw new BadRequestException('Vehicle does not belong to the specified owner');
-    }
-    
+
     if (!dto || typeof dto.amountNumber !== 'number' || !isFinite(dto.amountNumber) || !dto.amountWords) {
       throw new BadRequestException('amountNumber (number) and amountWords (string) are required');
+    }
+
+    if (!dto.vehicleIds || !Array.isArray(dto.vehicleIds) || dto.vehicleIds.length === 0) {
+      throw new BadRequestException('vehicleIds (number[]) is required and must contain at least one id');
+    }
+
+    // Fetch all selected vehicles
+    const vehicles = await this.vehiclesService.findByIds(dto.vehicleIds);
+    if (!vehicles || vehicles.length === 0) {
+      throw new NotFoundException('No vehicles found for the provided ids');
+    }
+
+    // Validate that all vehicles belong to the owner
+    const invalidVehicle = vehicles.find(v => (v as any).owner?.id !== ownerId);
+    if (invalidVehicle) {
+      throw new BadRequestException('One or more vehicles do not belong to the specified owner');
     }
     
     // Get company data
@@ -445,11 +444,6 @@ export class DocumentsService {
     const ownerName = owner.name.toUpperCase();
     const ownerIdentification = owner.identification;
     const ownerIssuedIn = owner.issuedIn; // Default value
-    const vehiclePlate = vehicle.plate;
-    const vehicleModel = vehicle.model;
-    const vehicleMake = (vehicle as any).make?.name || 'N/A';
-    const vehicleColor = vehicle.color || 'amarillo';
-    const entryDate = vehicle.entryDate ? new Date(vehicle.entryDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A';
     
     const amountFormatted = new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -461,31 +455,68 @@ export class DocumentsService {
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
     doc.text(sanitize(`${companyName} CERTIFICA QUE: `), { continued: true, align: 'justify' });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    
+
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
     doc.text(sanitize(`${ownerName} `), { continued: true });
     if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
     
     doc.text(
-      sanitize(` identificado(a) con la cédula de ciudadanía No. ${ownerIdentification} expedida en ${ownerIssuedIn}, es propietario de un (1) vehículo público (Taxi) de placa `),
-      { continued: true, align: 'justify' }
-    );
-    
-    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
-    doc.text(sanitize(vehiclePlate), { continued: true });
-    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
-    
-    doc.text(
-      sanitize(`, Modelo ${vehicleModel}, Marca ${vehicleMake}, vinculado a la empresa de transporte mediante contrato desde el once (11) de Diciembre del 2.006, color ${vehicleColor}.`),
+      sanitize(` identificado(a) con la cédula de ciudadanía No. ${ownerIdentification} expedida en ${ownerIssuedIn}, es propietario ${vehicles.length > 1 ? 'de los siguientes vehículos' : 'del siguiente vehículo'} de servicio público tipo Taxi vinculados a esta empresa de transporte:`),
       { align: 'justify' }
     );
 
     doc.moveDown(2);
 
-    // Income paragraph
+    // Draw table header for vehicles
+    const tableTop = doc.y;
+    const colPlate = 50;
+    const colModel = 140;
+    const colMake = 220;
+    const colColor = 340;
+    const colEntry = 430;
+
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('Placa', colPlate, tableTop);
+    doc.text('Modelo', colModel, tableTop);
+    doc.text('Marca', colMake, tableTop);
+    doc.text('Color', colColor, tableTop);
+    doc.text('Vinculación', colEntry, tableTop);
+
+    doc.moveDown(1.2);
+
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+
+    // Table rows
+    vehicles.forEach((vehicle) => {
+      const rowY = doc.y;
+      const vehicleMake = (vehicle as any).make?.name || 'N/A';
+      const vehicleColor = (vehicle as any).color || 'amarillo';
+      const entryDate = vehicle.entryDate
+        ? new Date(vehicle.entryDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+        : 'N/A';
+
+      doc.text(String(vehicle.plate || ''), colPlate, rowY);
+      doc.text(String(vehicle.model || ''), colModel, rowY);
+      doc.text(vehicleMake, colMake, rowY);
+      doc.text(vehicleColor, colColor, rowY);
+      doc.text(entryDate, colEntry, rowY);
+
+      doc.moveDown(1.2);
+    });
+
+    doc.moveDown(2);
+
+    // Income paragraph (reset X to left margin so it doesn't continue in the last table column)
     doc.fontSize(12);
+    const incomeIntro = vehicles.length > 1
+      ? 'Estos vehículos le representan a su propietario unos ingresos mensuales de: '
+      : 'Este vehículo le representa a su propietario unos ingresos mensuales de: ';
+
+    // 50 = left margin configured in PDFDocument({ margin: 50 })
     doc.text(
-      sanitize('Este vehículo le representa a su propietario ingresos mensuales de: '),
+      sanitize(incomeIntro),
+      50,
+      doc.y,
       { continued: true, align: 'justify' }
     );
     
@@ -501,7 +532,7 @@ export class DocumentsService {
 
     doc.moveDown(2);
 
-    // Footer with date
+    // Footer with date (ensure it also starts at left margin)
     const now = new Date();
     const day = now.getDate();
     const monthName = now.toLocaleDateString('es-CO', { month: 'long' });
@@ -510,6 +541,8 @@ export class DocumentsService {
       .fontSize(12)
       .text(
         sanitize(`La presente certificación se expide a solicitud del interesado a los diez (${day}) días del mes de ${monthName} del ${year}.`),
+        50,
+        doc.y,
         { align: 'justify' }
       );
 

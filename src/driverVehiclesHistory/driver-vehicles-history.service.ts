@@ -39,7 +39,8 @@ export class DriverVehiclesHistoryService {
     const queryBuilder = this.historyRepo.createQueryBuilder('history')
       .leftJoinAndSelect('history.driver', 'driver')
       .leftJoinAndSelect('history.vehicle', 'vehicle')
-      .leftJoinAndSelect('vehicle.company', 'company');
+      .leftJoinAndSelect('vehicle.company', 'company')
+      .leftJoinAndSelect('vehicle.owner', 'owner');
 
     if (companyId) {
       queryBuilder.andWhere('company.id = :companyId', { companyId });
@@ -65,14 +66,81 @@ export class DriverVehiclesHistoryService {
       queryBuilder.andWhere('history.changedBy LIKE :changedBy', { changedBy: `%${query.changedBy}%` });
     }
 
-    if (query.fromDate) {
-      // Filtrar por día, ignorando la hora
-      queryBuilder.andWhere('DATE(history.historyCreatedAt) >= :fromDate', { fromDate: query.fromDate });
-    }
+    const rangeStart = query.startDate || query.fromDate;
+    const rangeEnd = query.endDate || query.toDate;
 
-    if (query.toDate) {
-      // Filtrar por día, ignorando la hora
-      queryBuilder.andWhere('DATE(history.historyCreatedAt) <= :toDate', { toDate: query.toDate });
+    // Si se especifica un campo de vencimiento y rango de fechas, filtrar por ese campo
+    if (query.fieldName && rangeStart && rangeEnd) {
+      const allowedFields = [
+        'permit_expires_on',
+        'soat_expires_on',
+        'operation_card_expires_on',
+        'contractual_expires_on',
+        'extra_contractual_expires_on',
+        'technical_mechanic_expires_on',
+        'expires_on',
+        'all_documents',
+      ];
+
+      if (!allowedFields.includes(query.fieldName)) {
+        // Si el fieldName no es válido, no aplicamos filtro por vencimiento y caemos al filtro por historyCreatedAt
+      } else if (query.fieldName === 'all_documents') {
+        queryBuilder.andWhere(
+          '(' +
+          '(DATE(history.permitExpiresOn) BETWEEN :rangeStart AND :rangeEnd) OR ' +
+          '(DATE(history.soatExpires) BETWEEN :rangeStart AND :rangeEnd) OR ' +
+          '(DATE(history.operationCardExpires) BETWEEN :rangeStart AND :rangeEnd) OR ' +
+          '(DATE(history.contractualExpires) BETWEEN :rangeStart AND :rangeEnd) OR ' +
+          '(DATE(history.extraContractualExpires) BETWEEN :rangeStart AND :rangeEnd) OR ' +
+          '(DATE(history.technicalMechanicExpires) BETWEEN :rangeStart AND :rangeEnd)' +
+          ')',
+          { rangeStart, rangeEnd },
+        );
+      } else if (query.fieldName === 'expires_on') {
+        // Filtrar por fecha de vencimiento de licencia del conductor
+        queryBuilder.andWhere(
+          'DATE(driver.expiresOn) BETWEEN :rangeStart AND :rangeEnd',
+          { rangeStart, rangeEnd },
+        );
+      } else {
+        let columnName: string;
+        switch (query.fieldName) {
+          case 'permit_expires_on':
+            columnName = 'permitExpiresOn';
+            break;
+          case 'soat_expires_on':
+            columnName = 'soatExpires';
+            break;
+          case 'operation_card_expires_on':
+            columnName = 'operationCardExpires';
+            break;
+          case 'contractual_expires_on':
+            columnName = 'contractualExpires';
+            break;
+          case 'extra_contractual_expires_on':
+            columnName = 'extraContractualExpires';
+            break;
+          case 'technical_mechanic_expires_on':
+            columnName = 'technicalMechanicExpires';
+            break;
+          default:
+            columnName = query.fieldName;
+        }
+
+        queryBuilder.andWhere(
+          `DATE(history.${columnName}) BETWEEN :rangeStart AND :rangeEnd`,
+          { rangeStart, rangeEnd },
+        );
+      }
+    } else {
+      // Comportamiento anterior: filtrar por fecha de creación del historial
+      if (query.fromDate) {
+        queryBuilder.andWhere('DATE(history.historyCreatedAt) >= :fromDate', { fromDate: query.fromDate });
+      }
+
+      if (query.toDate) {
+        queryBuilder.andWhere('DATE(history.historyCreatedAt) <= :toDate', { toDate: query.toDate });
+      }
     }
 
     // Subconsulta para obtener el MAX(id) por cada originalRecordId
@@ -139,21 +207,38 @@ export class DriverVehiclesHistoryService {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Historial Conductor-Vehículo');
 
-    // Configurar las columnas
-    worksheet.columns = [
+    // Configurar columnas dinámicamente según el campo de vencimiento solicitado
+    const baseColumns: Partial<ExcelJS.Column>[] = [
       { header: 'Conductor', key: 'driverName', width: 30 },
       { header: 'Identificación', key: 'driverIdentification', width: 15 },
-      { header: 'Vehículo (Placa)', key: 'vehiclePlate', width: 15 },
-      { header: 'Empresa', key: 'company', width: 25 },
-      { header: 'Permiso Expira', key: 'permitExpiresOn', width: 15 },
-      { header: 'SOAT', key: 'soat', width: 20 },
-      { header: 'SOAT Expira', key: 'soatExpires', width: 15 },
-      { header: 'Tarjeta Operación', key: 'operationCard', width: 20 },
-      { header: 'T. Operación Expira', key: 'operationCardExpires', width: 18 },
-      { header: 'Contractual Expira', key: 'contractualExpires', width: 18 },
-      { header: 'Extra Contractual Expira', key: 'extraContractualExpires', width: 22 },
-      { header: 'Técnico Mecánica Expira', key: 'technicalMechanicExpires', width: 22 },
+      { header: 'Placa', key: 'vehiclePlate', width: 15 },
+      { header: 'Propietario', key: 'ownerName', width: 30 },
+      { header: 'Teléfono Propietario', key: 'ownerPhone', width: 18 },
     ];
+
+    const expirationColumnMap: Record<string, Partial<ExcelJS.Column>> = {
+      expires_on: { header: 'Licencia Expira', key: 'licenseExpires', width: 18 },
+      permit_expires_on: { header: 'Permiso Expira', key: 'permitExpiresOn', width: 15 },
+      soat_expires_on: { header: 'SOAT Expira', key: 'soatExpires', width: 15 },
+      operation_card_expires_on: { header: 'T. Operación Expira', key: 'operationCardExpires', width: 18 },
+      contractual_expires_on: { header: 'Contractual Expira', key: 'contractualExpires', width: 18 },
+      extra_contractual_expires_on: { header: 'Extra Contractual Expira', key: 'extraContractualExpires', width: 22 },
+      technical_mechanic_expires_on: { header: 'Técnico Mecánica Expira', key: 'technicalMechanicExpires', width: 22 },
+    };
+
+    const fieldName = (query as any).fieldName as string | undefined;
+
+    let expirationColumns: Partial<ExcelJS.Column>[];
+    if (!fieldName || fieldName === 'all_documents') {
+      // Incluir todas las columnas de vencimiento
+      expirationColumns = Object.values(expirationColumnMap);
+    } else {
+      const col = expirationColumnMap[fieldName];
+      // Si el fieldName no es reconocido, por seguridad incluimos todas
+      expirationColumns = col ? [col] : Object.values(expirationColumnMap);
+    }
+
+    worksheet.columns = [...baseColumns, ...expirationColumns] as ExcelJS.Column[];
 
     // Estilizar el encabezado
     const headerRow = worksheet.getRow(1);
@@ -175,7 +260,9 @@ export class DriverVehiclesHistoryService {
         driverName: driverFullName,
         driverIdentification: record.driver?.identification || 'N/A',
         vehiclePlate: record.vehicle?.plate || 'N/A',
-        company: record.vehicle?.company?.name || 'N/A',
+        ownerName: record.vehicle?.owner?.name || 'N/A',
+        ownerPhone: record.vehicle?.owner?.phone || 'N/A',
+        licenseExpires: record.driver?.expiresOn || 'N/A',
         permitExpiresOn: record.permitExpiresOn || 'N/A',
         soat: record.soat || 'N/A',
         soatExpires: record.soatExpires || 'N/A',

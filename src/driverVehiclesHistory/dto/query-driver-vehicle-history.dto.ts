@@ -29,7 +29,20 @@ export class QueryDriverVehicleHistoryDto {
   @IsDateString()
   toDate?: string;
 
+  // Rango de fechas para vencimientos específicos (startDate/endDate)
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
   @IsOptional()
   @IsString()
   changedBy?: string;
+
+  @IsOptional()
+  @IsString()
+  fieldName?: string;
 }

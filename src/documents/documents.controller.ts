@@ -33,16 +33,15 @@ export class DocumentsController {
     // Do not return anything when using @Res to stream
   }
 
-  @Post('owner-certificate/:ownerId/:vehicleId')
+  @Post('owner-certificate/:ownerId')
   async getOwnerCertificate(
     @Param('ownerId', ParseIntPipe) ownerId: number,
-    @Param('vehicleId', ParseIntPipe) vehicleId: number,
     @Body() dto: OwnerCertificateDto,
     @Headers('companyId') companyId: string,
     @Res() res: Response,
   ) {
     const companyIdNumber = companyId ? parseInt(companyId, 10) : undefined;
-    await this.documentsService.generateOwnerCertificate(ownerId, vehicleId, dto, companyIdNumber, res);
+    await this.documentsService.generateOwnerCertificate(ownerId, dto, companyIdNumber, res);
     // Do not return anything when using @Res to stream
   }
 }

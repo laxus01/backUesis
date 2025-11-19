@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Raw, Repository } from 'typeorm';
+import { In, Like, Raw, Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import { Owner } from './entities/owner.entity';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
@@ -29,6 +29,35 @@ export class OwnerService {
       where,
       relations: ['company'],
       order: { createdAt: 'DESC' }
+    });
+  }
+
+  async findVehiclesByOwnerFilters(name?: string, identification?: number, companyId?: number) {
+    const where: any = {};
+    if (name) {
+      where.name = Like(`%${name}%`);
+    }
+    if (typeof identification === 'number' && !isNaN(identification)) {
+      where.identification = Like(`${identification}%`);
+    }
+    if (companyId) {
+      where.company = { id: companyId };
+    }
+
+    const owners = await this.repo.find({ where });
+    if (!owners.length) {
+      return [];
+    }
+
+    const ownerIds = owners.map(o => o.id);
+
+    return this.vehicleRepo.find({
+      where: {
+        owner: { id: In(ownerIds) } as any,
+        ...(companyId ? { company: { id: companyId } as any } : {}),
+      },
+      relations: ['make', 'communicationCompany', 'owner', 'company'],
+      order: { createdAt: 'DESC' },
     });
   }
   findOne(id: number) { return this.repo.findOne({ where: { id } }); }
