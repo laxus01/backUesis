@@ -66,11 +66,13 @@ export class DriverVehiclesHistoryService {
     }
 
     if (query.fromDate) {
-      queryBuilder.andWhere('history.historyCreatedAt >= :fromDate', { fromDate: query.fromDate });
+      // Filtrar por día, ignorando la hora
+      queryBuilder.andWhere('DATE(history.historyCreatedAt) >= :fromDate', { fromDate: query.fromDate });
     }
 
     if (query.toDate) {
-      queryBuilder.andWhere('history.historyCreatedAt <= :toDate', { toDate: query.toDate });
+      // Filtrar por día, ignorando la hora
+      queryBuilder.andWhere('DATE(history.historyCreatedAt) <= :toDate', { toDate: query.toDate });
     }
 
     // Subconsulta para obtener el MAX(id) por cada originalRecordId
@@ -112,11 +114,13 @@ export class DriverVehiclesHistoryService {
     }
 
     if (query.fromDate) {
-      subQuery.andWhere('sub.historyCreatedAt >= :fromDate', { fromDate: query.fromDate });
+      // Filtrar por día también en la subconsulta
+      subQuery.andWhere('DATE(sub.historyCreatedAt) >= :fromDate', { fromDate: query.fromDate });
     }
 
     if (query.toDate) {
-      subQuery.andWhere('sub.historyCreatedAt <= :toDate', { toDate: query.toDate });
+      // Filtrar por día también en la subconsulta
+      subQuery.andWhere('DATE(sub.historyCreatedAt) <= :toDate', { toDate: query.toDate });
     }
 
     // Filtrar la consulta principal usando la subconsulta
