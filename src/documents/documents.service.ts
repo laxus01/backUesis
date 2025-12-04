@@ -591,7 +591,7 @@ export class DocumentsService {
     let managerTitle = 'Gerente'; // Default
     
     if (companyId === 2) {
-      managerName = 'EDUARDO G BELEÑO VILLANUEVA';
+      managerName = 'EDUARDO BELEÑO VILLANUEVA';
       managerTitle = 'JEFE DE TRANSPORTE';
     } else if (companyId) {
       const company = await this.companyService.findOne(companyId);
@@ -636,7 +636,7 @@ export class DocumentsService {
         .replace(/[\u2018\u2019]/g, "'");
 
     // Space for company logo (pre-printed on paper)
-    doc.moveDown(5);
+    doc.moveDown(7);
 
     // Date and location
     const now = new Date();
@@ -774,20 +774,23 @@ export class DocumentsService {
     if (!owner) throw new NotFoundException('Owner not found');
     
     // Get company data
-    let companyName = 'COOPERATIVA DE TRANSPORTE DE CONDUCTORES ASOCIADOS DE SINCELEJO "COOTRANSCAS LTDA"';
-    let managerName = 'CALIXTO E. TUÑON MARTINEZ';
+    let companyName = '';
+    let managerName = '';
     let managerTitle = 'Gerente';
     let introText = 'El suscrito gerente de la empresa';
-    
-    if (companyId === 2) {
-      managerName = 'EDUARDO G BELEÑO VILLANUEVA';
-      managerTitle = 'JEFE DE TRANSPORTE';
-      introText = 'La empresa';
-    } else if (companyId) {
+
+    if (companyId) {
       const company = await this.companyService.findOne(companyId);
       if (company) {
-        if (company.name) companyName = company.name.toUpperCase();
-        if (company.managerName) managerName = company.managerName.toUpperCase();
+        companyName = company.name?.toUpperCase() ?? '';
+        managerName = company.managerName?.toUpperCase() ?? '';
+      }
+      
+      // Custom overrides for specific companies
+      if (companyId === 2) {
+        managerName = 'EDUARDO BELEÑO VILLANUEVA';
+        managerTitle = 'JEFE DE TRANSPORTE';
+        introText = '';
       }
     }
     
@@ -827,7 +830,7 @@ export class DocumentsService {
         .replace(/[\u2018\u2019]/g, "'");
 
     // Space for company logo (pre-printed on paper)
-    doc.moveDown(5);
+    doc.moveDown(7);
 
     // Title
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
