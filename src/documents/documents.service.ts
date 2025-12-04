@@ -12,6 +12,8 @@ import { CompanyService } from '../company/company.service';
 import { TaxiCertificateDto } from './dto/taxi-certificate.dto';
 import { WorkCertificateDto } from './dto/work-certificate.dto';
 import { OwnerCertificateDto } from './dto/owner-certificate.dto';
+import { OperationCardRequestDto } from './dto/operation-card-request.dto';
+import { ActiveContractDto } from './dto/active-contract.dto';
 
 @Injectable()
 export class DocumentsService {
@@ -567,6 +569,376 @@ export class DocumentsService {
     } else {
       doc.font('Helvetica');
     }
+
+    // End document
+    doc.end();
+  }
+
+  async generateOperationCardRequest(vehicleId: number, companyId: number | undefined, @Res() res: Response) {
+    // Fetch vehicle data
+    const vehicle = await this.vehiclesService.findOne(vehicleId);
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    
+    // Fetch owner data using the ownerId from vehicle
+    const ownerId = (vehicle as any).owner?.id;
+    if (!ownerId) throw new NotFoundException('Vehicle does not have an owner assigned');
+    
+    const owner = await this.ownerService.findOne(ownerId);
+    if (!owner) throw new NotFoundException('Owner not found');
+    
+    // Get company data for manager info
+    let managerName = 'CALIXTO E. TUÑON MARTINEZ'; // Default
+    let managerTitle = 'Gerente'; // Default
+    
+    if (companyId === 2) {
+      managerName = 'EDUARDO G BELEÑO VILLANUEVA';
+      managerTitle = 'JEFE DE TRANSPORTE';
+    } else if (companyId) {
+      const company = await this.companyService.findOne(companyId);
+      if (company && company.managerName) {
+        managerName = company.managerName.toUpperCase();
+      }
+    }
+    
+    const doc = new PDFDocument({ margin: 50 });
+
+    // HTTP headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=solicitud_tarjeta_operacion.pdf');
+
+    // Start piping
+    doc.pipe(res);
+
+    // Try to use a Unicode-capable font if available
+    const unicodeFont = join(process.cwd(), 'assets', 'fonts', 'DejaVuSans.ttf');
+    const unicodeBoldFont = join(process.cwd(), 'assets', 'fonts', 'DejaVuSans-Bold.ttf');
+    if (existsSync(unicodeFont)) {
+      doc.font(unicodeFont);
+    } else {
+      doc.font('Helvetica');
+    }
+    
+    // Ensure text color is visible
+    doc.opacity(1).fillColor('black');
+
+    // Set metadata
+    doc.info = {
+      Title: 'Solicitud de Tarjeta de Operación',
+      Author: 'Sistema UESIS',
+      Subject: 'Solicitud de tarjeta de operación',
+      Keywords: 'tarjeta, operación, vehículo',
+      CreationDate: new Date(),
+    } as any;
+
+    const sanitize = (s: string) =>
+      s
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+
+    // Space for company logo (pre-printed on paper)
+    doc.moveDown(5);
+
+    // Date and location
+    const now = new Date();
+    const day = now.getDate();
+    const monthName = now.toLocaleDateString('es-CO', { month: 'long' });
+    const year = now.getFullYear();
+    
+    doc.fontSize(11).text(sanitize(`Sincelejo, ${day} de ${monthName} de ${year}`), { align: 'left' });
+    
+    doc.moveDown(4);
+
+    // Addressee
+    doc.fontSize(11).text('Señores:', { align: 'left' });
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('SECRETARIA DE MOVILIDAD DE SINCELEJO', { align: 'left' });
+    doc.text('E.                    S.                    D.', { align: 'left' });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    
+    doc.moveDown(3);
+
+    // Reference
+    doc.fontSize(11).text(sanitize('Referencia: '), { continued: true });
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('Solicitud de tarjeta de operacion.');
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    
+    doc.moveDown(3);
+
+    // Main paragraph - aligned with document margin
+    doc.fontSize(11).text(
+      sanitize('Por medio de la presente, solicito a ustedes expedir tarjeta de operacion al vehiculo con las siguientes caracteristicas:'),
+      { align: 'left' }
+    );
+    
+    doc.moveDown(2);
+    
+    // Vehicle data in two columns
+    const leftCol = 50; // Same as document margin
+    const rightCol = 320;
+    let currentY = doc.y;
+
+    // Left column
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MARCA:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${(vehicle as any).make?.name || 'N/A'}`);
+    
+    // Right column - same Y position
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MODELO:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.model || 'N/A'}`);
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Second row
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('COLOR:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text('  AMARILLO');
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('TIPO:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text('  HATCH BACK');
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Third row
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MOTOR:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.engineNumber || 'N/A'}`);
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('CHASIS:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.chassisNumber || 'N/A'}`);
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Fourth row - PLACA solo en columna izquierda
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('PLACA:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.plate || 'N/A'}`);
+    
+    doc.moveDown(3);
+
+    // Owner data
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('PROPIETARIO:', leftCol, doc.y, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${owner.name.toUpperCase()}`);
+    
+    doc.moveDown(0.8);
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('IDENTIFICACION:', leftCol, doc.y, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${owner.identification}`);
+    
+    doc.moveDown(3);
+
+    // Closing
+    doc.fontSize(11).text('Cordialmente,', { align: 'left' });
+    
+    doc.moveDown(6);
+
+    // Signature block
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text(managerName, { align: 'left' });
+    doc.text(managerTitle, { align: 'left' });
+    
+    // Restore normal font
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+
+    // End document
+    doc.end();
+  }
+
+  async generateActiveContract(vehicleId: number, companyId: number | undefined, @Res() res: Response) {
+    // Fetch vehicle data
+    const vehicle = await this.vehiclesService.findOne(vehicleId);
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    
+    // Fetch owner data using the ownerId from vehicle
+    const ownerId = (vehicle as any).owner?.id;
+    if (!ownerId) throw new NotFoundException('Vehicle does not have an owner assigned');
+    
+    const owner = await this.ownerService.findOne(ownerId);
+    if (!owner) throw new NotFoundException('Owner not found');
+    
+    // Get company data
+    let companyName = 'COOPERATIVA DE TRANSPORTE DE CONDUCTORES ASOCIADOS DE SINCELEJO "COOTRANSCAS LTDA"';
+    let managerName = 'CALIXTO E. TUÑON MARTINEZ';
+    let managerTitle = 'Gerente';
+    let introText = 'El suscrito gerente de la empresa';
+    
+    if (companyId === 2) {
+      managerName = 'EDUARDO G BELEÑO VILLANUEVA';
+      managerTitle = 'JEFE DE TRANSPORTE';
+      introText = 'La empresa';
+    } else if (companyId) {
+      const company = await this.companyService.findOne(companyId);
+      if (company) {
+        if (company.name) companyName = company.name.toUpperCase();
+        if (company.managerName) managerName = company.managerName.toUpperCase();
+      }
+    }
+    
+    const doc = new PDFDocument({ margin: 50 });
+
+    // HTTP headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=certificado_contrato_vigente.pdf');
+
+    // Start piping
+    doc.pipe(res);
+
+    // Try to use a Unicode-capable font if available
+    const unicodeFont = join(process.cwd(), 'assets', 'fonts', 'DejaVuSans.ttf');
+    const unicodeBoldFont = join(process.cwd(), 'assets', 'fonts', 'DejaVuSans-Bold.ttf');
+    if (existsSync(unicodeFont)) {
+      doc.font(unicodeFont);
+    } else {
+      doc.font('Helvetica');
+    }
+    
+    // Ensure text color is visible
+    doc.opacity(1).fillColor('black');
+
+    // Set metadata
+    doc.info = {
+      Title: 'Certificado de Contrato Vigente',
+      Author: 'Sistema UESIS',
+      Subject: 'Certificado de contrato vigente',
+      Keywords: 'contrato, vigente, vehículo',
+      CreationDate: new Date(),
+    } as any;
+
+    const sanitize = (s: string) =>
+      s
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'");
+
+    // Space for company logo (pre-printed on paper)
+    doc.moveDown(5);
+
+    // Title
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.fontSize(14).text('CERTIFICADO', { align: 'center' });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    
+    doc.moveDown(2);
+
+    // Main paragraph - aligned with document margin
+    doc.fontSize(11).text(
+      sanitize(`${introText} ${companyName}, certifica que el vehiculo cuyas caracteristicas se relacionan a continuacion, posee contrato vigente con la empresa:`),
+      { align: 'left' }
+    );
+    
+    doc.moveDown(2);
+    
+    // Vehicle data in two columns
+    const leftCol = 50; // Same as document margin
+    const rightCol = 320;
+    let currentY = doc.y;
+
+    // First row
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MARCA:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(` ${(vehicle as any).make?.name || 'N/A'}`);
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MODELO:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.model || 'N/A'}`);
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Second row
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('COLOR:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(' AMARILLO');
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('TIPO:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text('  HATCH BACK');
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Third row
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('MOTOR:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(` ${vehicle.engineNumber || 'N/A'}`);
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('CHASIS:', rightCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${vehicle.chassisNumber || 'N/A'}`);
+    
+    doc.moveDown(0.8);
+    currentY = doc.y;
+
+    // Fourth row - PLACA solo en columna izquierda
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('PLACA:', leftCol, currentY, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(` ${vehicle.plate || 'N/A'}`);
+    
+    doc.moveDown(3);
+
+    // Owner data
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('PROPIETARIO:', leftCol, doc.y, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${owner.name.toUpperCase()}`);
+    
+    doc.moveDown(0.8);
+    
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text('IDENTIFICACION:', leftCol, doc.y, { continued: true });
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
+    doc.text(`  ${owner.identification}`);
+    
+    doc.moveDown(2);
+
+    // Date footer
+    const now = new Date();
+    const day = now.getDate();
+    const monthName = now.toLocaleDateString('es-CO', { month: 'long' });
+    const year = now.getFullYear();
+    
+    doc.fontSize(11).text(
+      sanitize(`Para constacia se expide la presente certificacion el ${day} de ${monthName} de ${year}`),
+      { align: 'justify' }
+    );
+    
+    doc.moveDown(2);
+
+    // Closing
+    doc.fontSize(11).text('Cordialmente,', { align: 'left' });
+    
+    doc.moveDown(6);
+
+    // Signature block
+    if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
+    doc.text(managerName, { align: 'left' });
+    doc.text(managerTitle, { align: 'left' });
+    
+    // Restore normal font
+    if (existsSync(unicodeFont)) { doc.font(unicodeFont); } else { doc.font('Helvetica'); }
 
     // End document
     doc.end();
