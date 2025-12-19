@@ -46,7 +46,7 @@ export class DocumentsService {
         if (company.name) companyName = company.name.toUpperCase();
       }
     }
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 70 });
 
     // HTTP headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -82,7 +82,7 @@ export class DocumentsService {
         .replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2018\u2019]/g, "'");
 
-    doc.moveDown(6);
+    doc.moveDown(8);
 
     // Intro paragraph in bold
     if (existsSync(unicodeBoldFont)) {
@@ -246,7 +246,7 @@ export class DocumentsService {
       }
     }
     
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 70 });
 
     // HTTP headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -281,7 +281,7 @@ export class DocumentsService {
         .replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2018\u2019]/g, "'");
 
-    doc.moveDown(6);
+    doc.moveDown(8);
 
     // Title heading (bold and centered)
     if (existsSync(unicodeBoldFont)) {
@@ -389,7 +389,7 @@ export class DocumentsService {
       }
     }
     
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 70 });
 
     // HTTP headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -423,7 +423,7 @@ export class DocumentsService {
         .replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2018\u2019]/g, "'");
 
-    doc.moveDown(4);
+    doc.moveDown(8);
 
     // Title
     if (existsSync(unicodeBoldFont)) {
@@ -431,7 +431,7 @@ export class DocumentsService {
     } else {
       doc.font('Helvetica-Bold');
     }
-    doc.fontSize(14).text('CERTIFICACION:', { align: 'center' });
+    doc.fontSize(14).text('CERTIFICA QUE:', { align: 'center' });
     
     // Restore normal font
     if (existsSync(unicodeFont)) {
@@ -600,7 +600,7 @@ export class DocumentsService {
       }
     }
     
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 70 });
 
     // HTTP headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -636,7 +636,7 @@ export class DocumentsService {
         .replace(/[\u2018\u2019]/g, "'");
 
     // Space for company logo (pre-printed on paper)
-    doc.moveDown(7);
+    doc.moveDown(8);
 
     // Date and location
     const now = new Date();
@@ -674,7 +674,7 @@ export class DocumentsService {
     doc.moveDown(2);
     
     // Vehicle data in two columns
-    const leftCol = 50; // Same as document margin
+    const leftCol = 70; // Same as document margin
     const rightCol = 320;
     let currentY = doc.y;
 
@@ -747,7 +747,7 @@ export class DocumentsService {
     // Closing
     doc.fontSize(11).text('Cordialmente,', { align: 'left' });
     
-    doc.moveDown(6);
+    doc.moveDown(5);
 
     // Signature block
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
@@ -794,7 +794,7 @@ export class DocumentsService {
       }
     }
     
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ margin: 70 });
 
     // HTTP headers
     res.setHeader('Content-Type', 'application/pdf');
@@ -830,7 +830,7 @@ export class DocumentsService {
         .replace(/[\u2018\u2019]/g, "'");
 
     // Space for company logo (pre-printed on paper)
-    doc.moveDown(7);
+    doc.moveDown(8);
 
     // Title
     if (existsSync(unicodeBoldFont)) { doc.font(unicodeBoldFont); } else { doc.font('Helvetica-Bold'); }
@@ -848,7 +848,7 @@ export class DocumentsService {
     doc.moveDown(2);
     
     // Vehicle data in two columns
-    const leftCol = 50; // Same as document margin
+    const leftCol = 70; // Same as document margin
     const rightCol = 320;
     let currentY = doc.y;
 
