@@ -16,6 +16,8 @@ import { CompanyModule } from './company/company.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { DriverVehiclesModule } from './driverVehicles/driver-vehicles.module';
 import { DriverVehiclesHistoryModule } from './driverVehiclesHistory/driver-vehicles-history.module';
+import { DriverStateHistoryModule } from './driver-state-history/driver-state-history.module';
+import { VehicleStateHistoryModule } from './vehicle-state-history/vehicle-state-history.module';
 import { AdministrationModule } from './administration/administration.module';
 import { DocumentsModule } from './documents/documents.module';
 import { PolicyModule } from './policy/policy.module';
@@ -59,6 +61,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     UploadsModule,
     DriverVehiclesModule,
     DriverVehiclesHistoryModule,
+    DriverStateHistoryModule,
+    VehicleStateHistoryModule,
     AdministrationModule,
     DocumentsModule,
     PolicyModule,

@@ -91,6 +91,24 @@ CREATE TABLE `drivers_vehicles` (
   CONSTRAINT `FK_b769eb0e25154378450f4de7e9f` FOREIGN KEY (`driver_id`) REFERENCES `drivers` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `driver_state_history` (
+  `id` int(11) NOT NULL,
+  `driver_id` int(11) NOT NULL,
+  `previous_state` int(11) NOT NULL,
+  `new_state` int(11) NOT NULL,
+  `reason` text NOT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `vehicle_state_history` (
+  `id` int(11) NOT NULL,
+  `vehicle_id` int(11) NOT NULL,
+  `previous_state` int(11) NOT NULL,
+  `new_state` int(11) NOT NULL,
+  `reason` text NOT NULL,
+  `created_at` datetime(6) NOT NULL DEFAULT current_timestamp(6)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 DROP TABLE IF EXISTS `drivers_vehicles_history`;
 CREATE TABLE `drivers_vehicles_history` (
   `id` int NOT NULL AUTO_INCREMENT,
