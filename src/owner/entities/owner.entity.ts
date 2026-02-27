@@ -2,7 +2,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique, ManyT
 import { Company } from '../../company/entities/company.entity';
 
 @Entity('owners')
-@Unique(['identification'])
+@Unique(['identification', 'company'])
 export class Owner {
   @PrimaryGeneratedColumn()
   id: number;
