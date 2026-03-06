@@ -22,8 +22,8 @@ export class Owner {
   @Column({ length: 200, nullable: true })
   address?: string;
 
-  @Column({ length: 20 })
-  phone: string;
+  @Column({ length: 20, nullable: true })
+  phone?: string;
 
   @ManyToOne(() => Company, { eager: false, nullable: false })
   @JoinColumn({ name: 'company_id' })
