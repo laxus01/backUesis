@@ -1,9 +1,12 @@
-import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { DriverVehiclesService } from './driver-vehicles.service';
 import { CreateDriverVehicleDto } from './dto/create-driver-vehicle.dto';
 import { UpdateDriverVehicleDto } from './dto/update-driver-vehicle.dto';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('driver-vehicles')
+@UseGuards(JwtAuthGuard)
 export class DriverVehiclesController {
   constructor(private readonly service: DriverVehiclesService) { }
 
@@ -13,8 +16,14 @@ export class DriverVehiclesController {
   }
 
   @Post()
-  create(@Headers('companyId') companyId: string, @Body() data: CreateDriverVehicleDto) {
-    return this.service.create(data, companyId ? Number(companyId) : undefined);
+  create(
+    @Headers('companyId') companyId: string,
+    @Body() data: CreateDriverVehicleDto,
+    @CurrentUser() user: any
+  ) {
+    console.log('🔍 DEBUG CREATE - user del decorador:', user);
+    console.log('🔍 DEBUG CREATE - user?.userId:', user?.userId);
+    return this.service.create(data, companyId ? Number(companyId) : undefined, user?.userId);
   }
 
   @Get('by-driver/:driverId')
@@ -44,17 +53,34 @@ export class DriverVehiclesController {
   }
 
   @Put(':id')
-  update(@Headers('companyId') companyId: string, @Param('id') id: string, @Body() data: UpdateDriverVehicleDto, @Headers('changedBy') changedBy?: string) {
-    return this.service.update(Number(id), data, companyId ? Number(companyId) : undefined, changedBy);
+  update(
+    @Headers('companyId') companyId: string,
+    @Param('id') id: string,
+    @Body() data: UpdateDriverVehicleDto,
+    @CurrentUser() user: any,
+    @Headers('changedBy') changedBy?: string
+  ) {
+    console.log('🔍 DEBUG - user del decorador:', user);
+    console.log('🔍 DEBUG - user?.userId:', user?.userId);
+    return this.service.update(Number(id), data, companyId ? Number(companyId) : undefined, user?.userId, changedBy);
   }
 
   @Delete(':id')
-  remove(@Headers('companyId') companyId: string, @Param('id') id: string) {
-    return this.service.remove(Number(id), companyId ? Number(companyId) : undefined);
+  remove(
+    @Headers('companyId') companyId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: any
+  ) {
+    return this.service.remove(Number(id), companyId ? Number(companyId) : undefined, user?.userId);
   }
 
   @Delete('by')
-  removeBy(@Headers('companyId') companyId: string, @Query('driverId') driverId: string, @Query('vehicleId') vehicleId: string) {
-    return this.service.removeBy(Number(driverId), Number(vehicleId), companyId ? Number(companyId) : undefined);
+  removeBy(
+    @Headers('companyId') companyId: string,
+    @Query('driverId') driverId: string,
+    @Query('vehicleId') vehicleId: string,
+    @CurrentUser() user: any
+  ) {
+    return this.service.removeBy(Number(driverId), Number(vehicleId), companyId ? Number(companyId) : undefined, user?.userId);
   }
 }

@@ -17,7 +17,9 @@ export class DriverVehiclesService {
     private historyService: DriverVehiclesHistoryService,
   ) { }
 
-  async create(data: CreateDriverVehicleDto, companyId?: number) {
+  async create(data: CreateDriverVehicleDto, companyId?: number, userId?: number) {
+    console.log('🔍 DEBUG - userId recibido en create:', userId);
+    
     // If scoping by company, ensure vehicle belongs to the company
     if (companyId) {
       const vehicle = await this.vehiclesRepo.findOne({ where: { id: data.vehicleId, company: { id: companyId } as any } });
@@ -33,9 +35,12 @@ export class DriverVehiclesService {
       },
     });
 
+    console.log('🔍 DEBUG - Registro existente:', existing ? 'SÍ (UPDATE)' : 'NO (CREATE)');
+
     const payload: Partial<DriverVehicle> = {
       driver: { id: data.driverId } as any,
       vehicle: { id: data.vehicleId } as any,
+      user: userId ? { id: userId } as any : undefined,
       permitExpiresOn: data.permitExpiresOn,
       note: data.note,
       soat: data.soat,
@@ -53,7 +58,7 @@ export class DriverVehiclesService {
       
       // Guardar automáticamente en el historial después de crear/actualizar
       const actionType = existing ? 'UPDATE' : 'CREATE';
-      await this.historyService.saveToHistory(saved, actionType);
+      await this.historyService.saveToHistory(saved, actionType, userId);
       
       return saved;
     } catch (e: any) {
@@ -97,7 +102,7 @@ export class DriverVehiclesService {
     return this._attachActivePolicyToAssignments(assignment);
   }
 
-  async remove(id: number, companyId?: number, changedBy?: string) {
+  async remove(id: number, companyId?: number, userId?: number, changedBy?: string) {
     const where: any = { id };
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
     const existing = await this.repo.findOne({ 
@@ -107,12 +112,12 @@ export class DriverVehiclesService {
     if (!existing) throw new HttpException('Assignment not found', HttpStatus.NOT_FOUND);
     
     // Guardar en el historial antes de eliminar
-    await this.historyService.saveToHistory(existing, 'DELETE', changedBy);
+    await this.historyService.saveToHistory(existing, 'DELETE', userId, changedBy);
     
     return this.repo.remove(existing);
   }
 
-  async removeBy(driverId: number, vehicleId: number, companyId?: number, changedBy?: string) {
+  async removeBy(driverId: number, vehicleId: number, companyId?: number, userId?: number, changedBy?: string) {
     const where: any = { driver: { id: driverId } as any, vehicle: { id: vehicleId } as any };
     if (companyId) where.vehicle.company = { id: companyId } as any;
     const existing = await this.repo.findOne({ 
@@ -122,13 +127,15 @@ export class DriverVehiclesService {
     if (!existing) throw new HttpException('Assignment not found', HttpStatus.NOT_FOUND);
     
     // Guardar en el historial antes de eliminar
-    await this.historyService.saveToHistory(existing, 'DELETE', changedBy);
+    await this.historyService.saveToHistory(existing, 'DELETE', userId, changedBy);
     
     return this.repo.remove(existing);
   }
 
 
-  async update(id: number, data: UpdateDriverVehicleDto, companyId?: number, changedBy?: string) {
+  async update(id: number, data: UpdateDriverVehicleDto, companyId?: number, userId?: number, changedBy?: string) {
+    console.log('🔍 DEBUG - userId recibido en update:', userId);
+    
     // Verificar si existe la asignación conductor-vehículo
     const where: any = { id };
     if (companyId) where.vehicle = { company: { id: companyId } as any } as any;
@@ -148,10 +155,11 @@ export class DriverVehiclesService {
     }
 
     // Guardar el registro actual en el historial antes de actualizar
-    await this.historyService.saveToHistory(existing, 'UPDATE', changedBy);
+    await this.historyService.saveToHistory(existing, 'UPDATE', userId, changedBy);
 
     // Actualizar solo los campos proporcionados
     const updatedEntity = this.repo.merge(existing, {
+      user: userId ? { id: userId } as any : existing.user,
       permitExpiresOn: data.permitExpiresOn,
       note: data.note,
       soat: data.soat,

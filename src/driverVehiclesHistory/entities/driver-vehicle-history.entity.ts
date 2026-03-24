@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn } from 'typeorm';
 import { Driver } from '../../drivers/entities/driver.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('drivers_vehicles_history')
 export class DriverVehicleHistory {
@@ -14,6 +15,10 @@ export class DriverVehicleHistory {
   @ManyToOne(() => Vehicle, { nullable: false })
   @JoinColumn({ name: 'vehicle_id' })
   vehicle: Vehicle;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
   @Column({ type: 'int', name: 'original_record_id', nullable: false })
   originalRecordId: number;

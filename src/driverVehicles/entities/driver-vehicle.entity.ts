@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Unique, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Driver } from '../../drivers/entities/driver.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('drivers_vehicles')
 @Unique(['driver', 'vehicle'])
@@ -15,6 +16,10 @@ export class DriverVehicle {
   @ManyToOne(() => Vehicle, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'vehicle_id' })
   vehicle: Vehicle;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
   @Column({ type: 'date', name: 'permit_expires_on', nullable: true })
   permitExpiresOn?: string;

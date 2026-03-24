@@ -12,10 +12,11 @@ export class DriverVehiclesHistoryService {
     @InjectRepository(DriverVehicleHistory) private historyRepo: Repository<DriverVehicleHistory>,
   ) { }
 
-  async saveToHistory(original: DriverVehicle, actionType: string, changedBy?: string) {
+  async saveToHistory(original: DriverVehicle, actionType: string, userId?: number, changedBy?: string) {
     const historyRecord = this.historyRepo.create({
       driver: original.driver,
       vehicle: original.vehicle,
+      user: userId ? { id: userId } as any : undefined,
       originalRecordId: original.id,
       permitExpiresOn: original.permitExpiresOn,
       note: original.note,
