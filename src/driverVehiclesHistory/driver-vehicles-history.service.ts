@@ -40,6 +40,7 @@ export class DriverVehiclesHistoryService {
     const queryBuilder = this.historyRepo.createQueryBuilder('history')
       .leftJoinAndSelect('history.driver', 'driver')
       .leftJoinAndSelect('history.vehicle', 'vehicle')
+      .leftJoinAndSelect('history.user', 'user')
       .leftJoinAndSelect('vehicle.company', 'company')
       .leftJoinAndSelect('vehicle.owner', 'owner');
 
